@@ -1,9 +1,14 @@
 {
-  "id": "jezero-ctx",
-  "width": 901,
-  "height": 1024,
-  "cellSize": 98.96484375,
-  "minElevationM": -3500.284423828125,
-  "maxElevationM": -476.1791687011719,
-  "source": "CTX DEM 20 m, downsampled"
+  "id": "jezero-hirise-1m",
+  "width": 2048,
+  "height": 2048,
+  "cellSize": 1,
+  "minElevationM": -2493.85205078125,
+  "maxElevationM": -2409.25341796875,
+  "sourceBBoxM": [
+    4587042,
+    1094850,
+    4589090,
+    1096898
+  ]
 }
