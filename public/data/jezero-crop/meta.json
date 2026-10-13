@@ -1,0 +1,9 @@
+{
+  "id": "jezero-crop-20m",
+  "width": 1000,
+  "height": 1000,
+  "cellSize": 20,
+  "minElevationM": -2924.618896484375,
+  "maxElevationM": -2326.3837890625,
+  "source": "CTX DEM 20 m, crop x=1728 y=2034"
+}

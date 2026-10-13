@@ -1,0 +1,31 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Range test</title>
+<body style="font: 14px monospace; background: #111; color: #ddd; padding: 16px">
+<pre id="out">running...</pre>
+<script type="module">
+  import { fromUrl } from 'geotiff';
+
+  const URL = 'https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/CTX/ScienceInvestigationMaps_JPL/M20_JezeroCrater_CTXDEM_20m.tif';
+  const out = document.getElementById('out');
+  const log = (s) => (out.textContent += '\n' + s);
+
+  try {
+    const t0 = performance.now();
+    const tiff = await fromUrl(URL);
+    const img = await tiff.getImage();
+    log(`header read: ${img.getWidth()} x ${img.getHeight()}  (${(performance.now() - t0).toFixed(0)} ms)`);
+    log(`tiled: ${img.isTiled}   tile size: ${img.getTileWidth()} x ${img.getTileHeight()}`);
+
+    const x0 = 2000, y0 = 2500, size = 512;
+    const t1 = performance.now();
+    const [data] = await img.readRasters({ window: [x0, y0, x0 + size, y0 + size] });
+    log(`read ${size}x${size} window: ${data.length} values  (${(performance.now() - t1).toFixed(0)} ms)`);
+
+    let min = Infinity, max = -Infinity;
+    for (const v of data) { if (v < -1e30) continue; if (v < min) min = v; if (v > max) max = v; }
+    log(`elevation min/max: ${min.toFixed(1)} / ${max.toFixed(1)} m`);
+  } catch (e) {
+    log('FAILED: ' + e);
+  }
+</script>

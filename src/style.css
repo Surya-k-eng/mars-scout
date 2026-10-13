@@ -1,1 +1,8 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+
+/* back layer: the 3D scene */
+#three-canvas { position: fixed; inset: 0; z-index: 0; display: block; }
+
+/* front layer: HTML interface. Empty areas let clicks fall through to the 3D scene. */
+#ui { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+#ui button, #ui input, #ui select, #ui .panel { pointer-events: auto; }
