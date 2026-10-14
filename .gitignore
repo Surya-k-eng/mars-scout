@@ -32,3 +32,11 @@ public/data/jezero-tiles/
 
 data-prep/raw/
 public/data/jezero-tiles/
+
+public/tiles/
+
+data-prep/raw/
+public/tiles/
+node_modules/
+*.tif
+*.zip
