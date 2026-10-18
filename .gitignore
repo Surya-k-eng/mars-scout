@@ -40,3 +40,11 @@ public/tiles/
 node_modules/
 *.tif
 *.zip
+*.bak
+*.bak[0-9]
+*.bak[0-9][0-9]
+tiles/
+*.tiff
+*.img
+.env
+.env.local
