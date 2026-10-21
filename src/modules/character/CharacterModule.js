@@ -1,0 +1,280 @@
+import * as THREE from 'three';
+import { Module } from '../../core/Module.js';
+import { lodViews } from '../../core/lodViews.js';
+
+// "Astro": a ball with eyes, 1.7 m tall, walking on the terrain. His own camera is drawn in a small
+// second screen in the top-right corner of the window. The main view is left untouched.
+//
+// Controls:  W A S D = walk   Shift = run   Arrow left/right = turn   Arrow up/down = look up/down
+//            R = drop Astro under the main camera   C = switch Astro's controls on/off
+//
+// This module only reads the 'terrain' object that WorldModule publishes (heightAt / gridToWorld / worldToGrid).
+// It does not touch lights, fog, background or the main camera's position.
+
+const BODY_R = 0.85;            // ball radius, metres  (diameter 1.7 m = 170 cm tall)
+const EYE_H = 1.5;              // camera height above the ground, metres
+const FOV = 70;
+const WALK = 6;                 // m/s
+const RUN_MULT = 5;
+const TURN = 1.8;               // rad/s
+const PITCH_MAX = 1.4;          // rad, how far up/down he can look
+const SMOOTH = 14;              // higher = follows the ground more tightly
+const INSET_W = 560, INSET_H = 440, MARGIN = 16;   // second screen size in CSS pixels
+const BEACON = true;            // thin cyan pillar so you can find him from the main view
+const BODY_LAYER = 1;
+const RING_M = 350;             // full-detail circle around Astro, metres, in every direction           // body is only drawn for the main camera, never in his own view
+
+export class CharacterModule extends Module {
+  static id = 'character';
+
+  async init() {
+    this.alive = true;
+    this.enabled = true;
+    this.keys = new Set();
+    this.x = 0; this.z = 0; this.y = 0;      // world position; (0, 0) = centre of the HiRISE area
+    this.yaw = 0; this.pitch = 0;
+    this.snap = true;                         // next ground height is applied instantly
+    this.busy = false;
+    this.last = performance.now();
+
+    // his eyes
+    this.cam = new THREE.PerspectiveCamera(FOV, INSET_W / INSET_H, 0.5, 400000);
+    this.cam.rotation.order = 'YXZ';
+
+    // his body
+    this.group = this.buildBody();
+    this.ctx.scene.add(this.group);
+
+    // second-screen frame (DOM overlay)
+    this.frame = document.createElement('div');
+    this.frame.style.cssText =
+      'position:fixed;pointer-events:none;box-sizing:border-box;border:2px solid #fff;' +
+      'box-shadow:0 0 14px rgba(0,0,0,.6);z-index:10;font:600 11px/1 system-ui,sans-serif;color:#fff;';
+    this.label = document.createElement('div');
+    this.label.style.cssText = 'position:absolute;left:6px;bottom:6px;text-shadow:0 0 4px #000;';
+    this.frame.appendChild(this.label);
+    document.body.appendChild(this.frame);
+    // coordinates readout (toggle with the V key)
+    this.coords = document.createElement('pre');
+    this.coords.style.cssText =
+      'position:fixed;pointer-events:none;z-index:10;margin:0;padding:8px;display:none;' +
+      'font:12px monospace;color:#9f9;background:rgba(0,0,0,.75);border:1px solid #444;border-radius:4px;';
+    document.body.appendChild(this.coords);
+
+    // keyboard
+    this.onKey = (e) => {
+      if (/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName || '')) return;
+      const k = e.code;
+      if (k.startsWith('Arrow')) e.preventDefault();
+      if (e.type === 'keydown') {
+        if (!e.repeat && k === 'KeyR') this.respawn();
+        if (!e.repeat && k === 'KeyC') this.enabled = !this.enabled;
+        if (!e.repeat && k === 'KeyV') this.coords.style.display = this.coords.style.display === 'none' ? 'block' : 'none';
+        this.keys.add(k);
+      } else {
+        this.keys.delete(k);
+      }
+    };
+    this.onBlur = () => this.keys.clear();
+    window.addEventListener('keydown', this.onKey);
+    window.addEventListener('keyup', this.onKey);
+    window.addEventListener('blur', this.onBlur);
+
+    // draw after every main render: wrap renderer.render so no change to App.js is needed
+    const r = this.ctx.renderer;
+    this.prevRender = r.render;
+    const prev = this.prevRender.bind(r);
+    this.wrapper = (scene, camera) => {
+      prev(scene, camera);
+      if (this.busy || !this.alive || camera !== this.ctx.camera) return;
+      this.busy = true;
+      try {
+        camera.layers.enable(BODY_LAYER);   // the main camera also sees Astro's body
+        this.update();
+        this.drawInset(prev, scene);
+      } finally {
+        this.busy = false;
+      }
+    };
+    r.render = this.wrapper;
+  }
+
+  buildBody() {
+    const g = new THREE.Group();
+    const suit = new THREE.MeshStandardMaterial({ color: 0xece6dd, roughness: 0.6 });
+    const white = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+    const black = new THREE.MeshStandardMaterial({ color: 0x0b0b0b, roughness: 0.2 });
+    this.mats = [suit, white, black];
+
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(BODY_R, 32, 24), suit);
+    ball.position.y = BODY_R;
+    g.add(ball);
+
+    const eyeGeo = new THREE.SphereGeometry(0.2, 16, 12);
+    const pupilGeo = new THREE.SphereGeometry(0.1, 12, 10);
+    this.geos = [ball.geometry, eyeGeo, pupilGeo];
+    for (const s of [-1, 1]) {                 // he faces -z, like a camera with yaw 0
+      const eye = new THREE.Mesh(eyeGeo, white);
+      eye.position.set(s * 0.3, 1.15, -0.7);
+      const pupil = new THREE.Mesh(pupilGeo, black);
+      pupil.position.set(s * 0.3, 1.15, -0.87);
+      g.add(eye, pupil);
+    }
+
+    if (BEACON) {
+      const pillarGeo = new THREE.CylinderGeometry(1.5, 1.5, 300, 8);
+      const markGeo = new THREE.SphereGeometry(1, 16, 12);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.85, depthTest: false });
+      const pillar = new THREE.Mesh(pillarGeo, mat);
+      pillar.position.y = 150;
+      this.marker = new THREE.Mesh(markGeo, mat);   // stays the same size on screen (scaled in update)
+      this.marker.position.y = BODY_R;
+      pillar.renderOrder = this.marker.renderOrder = 999;
+      g.add(pillar, this.marker);
+      this.geos.push(pillarGeo, markGeo); this.mats.push(mat);
+    }
+
+    g.traverse((o) => o.layers.set(BODY_LAYER));
+    return g;
+  }
+
+  respawn() {
+    const c = this.ctx.camera;
+    if (!c) return;
+    this.x = c.position.x;
+    this.z = c.position.z;
+    this.snap = true;
+  }
+
+  update() {
+    const t = this.ctx.state.get('terrain');
+    if (!t) return;
+        if (!this.registered) {
+      this.cam.userData.ringRadius = RING_M;
+      this.cam.userData.ringHeight = 1600;
+      lodViews.push(this.cam);
+      this.registered = true;
+      console.log('[astro] camera registered with the terrain');
+    }
+    const now = performance.now();
+    const dt = Math.min((now - this.last) / 1000, 0.1);
+    this.last = now;
+    const k = this.keys;
+
+    if (this.enabled) {
+      if (k.has('ArrowLeft')) this.yaw += TURN * dt;
+      if (k.has('ArrowRight')) this.yaw -= TURN * dt;
+      if (k.has('ArrowUp')) this.pitch += TURN * dt;
+      if (k.has('ArrowDown')) this.pitch -= TURN * dt;
+      this.pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, this.pitch));
+
+      const f = (k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0);
+      const s = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0);
+      if (f || s) {
+        const run = k.has('ShiftLeft') || k.has('ShiftRight') ? RUN_MULT : 1;
+        const sp = (WALK * run * dt) / Math.hypot(f, s);
+        const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
+        this.x += (-sin * f + cos * s) * sp;      // forward = (-sin, -cos), right = (cos, -sin)
+        this.z += (-cos * f - sin * s) * sp;
+      }
+    }
+
+    // stay inside the terrain footprint
+    const hx = ((t.width - 1) / 2) * t.cellSize, hz = ((t.height - 1) / 2) * t.cellSize;
+    this.x = Math.max(-hx, Math.min(hx, this.x));
+    this.z = Math.max(-hz, Math.min(hz, this.z));
+
+    // stand on the surface that is actually drawn (follows hills, crater walls and mountains)
+    const { gx, gz } = t.worldToGrid(this.x, this.z);
+    if (!Number.isNaN(t.heightAt(gx, gz))) {
+      const target = t.gridToWorld(gx, gz).y;
+      this.y = this.snap ? target : this.y + (target - this.y) * (1 - Math.exp(-SMOOTH * dt));
+      this.snap = false;
+    }
+
+    if (this.marker && this.ctx.camera) {
+      const d = this.ctx.camera.position.distanceTo(this.group.position);
+      this.marker.scale.setScalar(Math.max(BODY_R, d * 0.012));   // about 1% of the screen, never smaller than the ball
+    }
+
+    this.group.position.set(this.x, this.y, this.z);
+    this.group.rotation.y = this.yaw;
+    this.cam.position.set(this.x, this.y + EYE_H, this.z);
+    this.cam.rotation.set(this.pitch, this.yaw, 0);
+  }
+
+  drawInset(render, scene) {
+    const r = this.ctx.renderer;
+    const size = r.getSize(new THREE.Vector2());
+    const w = Math.min(INSET_W, size.x * 0.4), h = Math.round((w * INSET_H) / INSET_W);
+    const x = size.x - w - MARGIN, y = size.y - h - MARGIN;   // viewport origin is bottom-left
+
+    const vp = r.getViewport(new THREE.Vector4());
+    const sc = r.getScissor(new THREE.Vector4());
+    const st = r.getScissorTest();
+    const ac = r.autoClear;
+
+    r.setScissorTest(true);
+    r.setViewport(x, y, w, h);
+    r.setScissor(x, y, w, h);
+    r.autoClear = true;
+    this.cam.aspect = w / h;
+    this.cam.userData.viewHeight = h * r.getPixelRatio();   // true size of his screen, so far mountains aren't over-detailed
+    this.cam.updateProjectionMatrix();
+    render(scene, this.cam);
+
+    r.setViewport(vp);
+    r.setScissor(sc);
+    r.setScissorTest(st);
+    r.autoClear = ac;
+
+    const rect = r.domElement.getBoundingClientRect();
+    const s = this.frame.style;
+    s.left = `${rect.right - w - MARGIN}px`;
+    s.top = `${rect.top + MARGIN}px`;
+    s.width = `${w}px`;
+    s.height = `${h}px`;
+    this.updateCoords();
+    const c = this.coords.style;
+    c.left = `${rect.right - w - MARGIN}px`;   // sits just under the Astro cam
+    c.top = `${rect.top + MARGIN + h + 6}px`;
+    c.width = `${w - 18}px`;
+    this.label.textContent = this.enabled ? 'ASTRO CAM  (C = off)' : 'ASTRO CAM  paused (C = on)';
+  }
+
+  updateCoords() {
+    if (this.coords.style.display === 'none') return;
+    const t = this.ctx.state.get('terrain');
+    if (!t?.worldToLonLat) { this.coords.textContent = 'terrain not ready'; return; }
+    const { lon, lat } = t.worldToLonLat(this.x, this.z);
+    const real = t.sample(lon, lat);
+    const r = t.hiriseRect;
+    const inHi = this.x >= r.x0 && this.x <= r.x1 && this.z >= r.z0 && this.z <= r.z1;
+    const f = (v, d = 1) => (v == null || !Number.isFinite(v) ? 'n/a' : v.toFixed(d));
+    this.coords.textContent = [
+      'Astro',
+      ' lat ' + lat.toFixed(5) + ' deg',
+      ' lon ' + lon.toFixed(5) + ' deg',
+      ' world x ' + f(this.x) + '  z ' + f(this.z),
+      ' ground ' + f(real?.h) + ' m (' + (real?.layer ?? 'no data') + ')',
+      ' in HiRISE area: ' + (inHi ? 'yes' : 'no'),
+    ].join('\n');
+  }
+
+  dispose() {
+    const i = lodViews.indexOf(this.cam); if (i >= 0) lodViews.splice(i, 1);
+    super.dispose();
+    this.alive = false;
+    const r = this.ctx.renderer;
+    if (r && r.render === this.wrapper) r.render = this.prevRender;
+    window.removeEventListener('keydown', this.onKey);
+    window.removeEventListener('keyup', this.onKey);
+    window.removeEventListener('blur', this.onBlur);
+    this.frame?.remove();
+    this.ctx.camera?.layers.disable(BODY_LAYER);
+    if (this.group) this.ctx.scene.remove(this.group);
+    for (const g of this.geos || []) g.dispose();
+    for (const m of this.mats || []) m.dispose();
+    this.coords?.remove();
+  }
+}
