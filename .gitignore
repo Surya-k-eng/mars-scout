@@ -40,3 +40,13 @@ public/tiles/
 node_modules/
 *.tif
 *.zip
+
+
+*.bak
+*.bak*
+*.back_best.js
+*.before_cam
+*.broken
+*.bak_cad
+
+crism_data/

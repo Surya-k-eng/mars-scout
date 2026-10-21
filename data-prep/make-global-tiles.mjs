@@ -8,14 +8,18 @@ if (!SRC) throw new Error('usage: node data-prep/make-global-tiles.mjs <dem.tif>
 
 const S = 256, V = S + 1, CHUNK = 256;
 const img = await (await fromFile(SRC)).getImage();
-const FW = img.getWidth(), H = img.getHeight();
+const FW = img.getWidth(), FH = img.getHeight();
 const fbox = img.getBoundingBox(), px = Math.abs(img.getResolution()[0]);
 const toU = (lon) => (Math.abs(fbox[0]) > 400 ? (lon * Math.PI / 180) * 3396190 : lon);
 const LON0 = Number(process.argv[5] ?? -180), LON1 = Number(process.argv[6] ?? 180);
 const XA = Math.max(0, Math.round((toU(LON0) - fbox[0]) / px));
 const XB = Math.min(FW, Math.round((toU(LON1) - fbox[0]) / px));
 const W = XB - XA;
-const bbox = [fbox[0] + XA * px, fbox[1], fbox[0] + XB * px, fbox[3]];
+const LAT0 = Number(process.argv[7] ?? -90), LAT1 = Number(process.argv[8] ?? 90);
+const YA = Math.max(0, Math.round((fbox[3] - toU(LAT1)) / px));
+const YB = Math.min(FH, Math.round((fbox[3] - toU(LAT0)) / px));
+const H = YB - YA;
+const bbox = [fbox[0] + XA * px, fbox[3] - YB * px, fbox[0] + XB * px, fbox[3] - YA * px];
 const nodata = img.getGDALNoData();
 const bad = (v) => v === nodata || !Number.isFinite(v) || v < -20000;
 console.log({ W, H, nodata, bbox, XA, XB });
@@ -67,7 +71,7 @@ function addRow(lv, gr, samples) {
 let gmin = Infinity, gmax = -Infinity, lastPct = -1;
 for (let y0 = 0; y0 < H; y0 += CHUNK) {
   const y1 = Math.min(y0 + CHUNK, H);
-  const [band] = await img.readRasters({ window: [XA, y0, XB, y1] });
+  const [band] = await img.readRasters({ window: [XA, YA + y0, XB, YA + y1] });
   for (let r = y0; r < y1; r++) {
     const row = band.subarray((r - y0) * W, (r - y0 + 1) * W);
     for (let i = 0; i < row.length; i++) { const v = row[i]; if (v >= -20000) { if (v < gmin) gmin = v; if (v > gmax) gmax = v; } }
