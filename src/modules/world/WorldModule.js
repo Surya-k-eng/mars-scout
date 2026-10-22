@@ -239,30 +239,22 @@ export class WorldModule extends Module {
         const { lon, lat } = gridToLonLat(gx, gz);
         const s = this.sample(lon, lat);
         return {
-          x: (gx - (W - 1) / 2) * px,
-          y: s ? (s.h - minE) * VERT_EXAG + s.order * LIFT : 0,   // sits on the surface that is actually drawn
-          z: (gz - (H - 1) / 2) * px,
+          x: (lon - this.lonC) * M,
+          y: s ? (s.h - minE) * VERT_EXAG + s.order * LIFT : 0,
+          z: (this.latC - lat) * M,
         };
       },
+      worldToGrid: (x, z) => ({
+        gx: (this.lonC + x / M - ref.lon0) / ref.res,
+        gz: (ref.lat0 - (this.latC - z / M)) / ref.res,
+      }),
       worldToGrid: (x, z) => ({ gx: x / px + (W - 1) / 2, gz: z / px + (H - 1) / 2 }),
     };
     this.ctx.state.set('terrain', terrain);
         terrain.ramp = this.ramp;                                 // same colours as the real ground
-    {
-      const f = this.layers[0].fp;                            // footprint of the regional layer, in world metres
-      terrain.regionRect = {
-        x0: (f.lonMin - this.lonC) * M, x1: (f.lonMax - this.lonC) * M,
-        z0: (this.latC - f.latMax) * M, z1: (this.latC - f.latMin) * M,
-      };
-      terrain.lonC = this.lonC;
-      terrain.latC = this.latC;
-      terrain.worldToLonLat = (x, z) => ({ lon: this.lonC + x / M, lat: this.latC - z / M });
-      terrain.lonLatToWorld = (lon, lat) => ({ x: (lon - this.lonC) * M, z: (this.latC - lat) * M });
-      terrain.hiriseRect = {                      // HiRISE footprint in world metres
-        x0: (ref.fp.lonMin - this.lonC) * M, x1: (ref.fp.lonMax - this.lonC) * M,
-        z0:(this.latC - ref.fp.latMax) * M, z1: (this.latC - ref.fp.latMin) * M,
-      };
-    }
+    this.terrain = terrain;
+    terrain.recenter = (lon, lat) => this.recenter(lon, lat);
+    this.updateTerrainFrame();
     terrain.sampleWorld = (x, z) => {                         // drawn height at a world x/z, or null if no data
       const s = this.sample(this.lonC + x / M, this.latC - z / M);
       return s ? (s.h - minE) * VERT_EXAG + s.order * LIFT : null;
@@ -271,6 +263,46 @@ export class WorldModule extends Module {
 
     this.refine();
     this.timer = setInterval(() => this.refine(), 100);
+  }
+
+    updateTerrainFrame() {
+    const t = this.terrain, f = this.layers[0].fp, g = this.ref.fp;
+    t.regionRect = {
+      x0: (f.lonMin - this.lonC) * M, x1: (f.lonMax - this.lonC) * M,
+      z0: (this.latC - f.latMax) * M, z1: (this.latC - f.latMin) * M,
+    };
+    t.hiriseRect = {
+      x0: (g.lonMin - this.lonC) * M, x1: (g.lonMax - this.lonC) * M,
+      z0: (this.latC - g.latMax) * M, z1: (this.latC - g.latMin) * M,
+    };
+    t.lonC = this.lonC;
+    t.latC = this.latC;
+    t.worldToLonLat = (x, z) => ({ lon: this.lonC + x / M, lat: this.latC - z / M });
+    t.lonLatToWorld = (lon, lat) => ({ x: (lon - this.lonC) * M, z: (this.latC - lat) * M });
+  }
+
+  // Move the world origin (0,0,0) to lon/lat. Returns {dx, dz}: where the new origin was in the OLD frame.
+  // To keep anything in place visually, subtract dx/dz from its x/z.
+  recenter(lon, lat) {
+    const dx = (lon - this.lonC) * M, dz = (this.latC - lat) * M;
+    this.lonC = lon;
+    this.latC = lat;
+    for (const l of this.layers) {
+      for (const t of l.tiles.values()) {
+        t.box.min.set((t.lonA - lon) * M, this.yLo, (lat - t.latA) * M);
+        t.box.max.set((t.lonB - lon) * M, this.yHi, (lat - t.latB) * M);
+        if (t.mesh) {
+          this.group.remove(t.mesh);
+          t.mesh.geometry.dispose();
+          t.mesh = this.makeMesh(l, t);
+          t.mesh.visible = this.drawn.has(t);
+          this.group.add(t.mesh);
+        }
+      }
+    }
+    this.updateTerrainFrame();
+    this.ctx.bus.emit('world:recentered', { dx, dz, lon, lat });
+    return { dx, dz };
   }
 
   // ---- layers and tiles --------------------------------------------------
@@ -545,7 +577,7 @@ fillGaps(h, V, maxGap = 24, smooth = 6) {
     const mesh = new THREE.Mesh(geo, this.matFor(order));
     mesh.frustumCulled = false;                             // refine() does the culling
     mesh.visible = false;
-    return mesh;
+    return mesh;  
   }
 
   // ---- level of detail ---------------------------------------------------

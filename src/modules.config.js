@@ -3,10 +3,13 @@
 import { WorldModule } from './modules/world/WorldModule.js';
 import { CharacterModule } from './modules/character/CharacterModule.js';
 import { AtmosphereModule } from './modules/atmosphere/AtmosphereModule.js';
+import { MapPickModule } from './modules/mappick/MapPickModule.js';
+
 
 
 export default [
   WorldModule,
   CharacterModule,
   AtmosphereModule,
+  MapPickModule,
 ];
