@@ -7,9 +7,11 @@ import { MapPickModule } from './modules/mappick/MapPickModule.js';
 
 
 
+
 export default [
   WorldModule,
   CharacterModule,
   AtmosphereModule,
   MapPickModule,
+ 
 ];

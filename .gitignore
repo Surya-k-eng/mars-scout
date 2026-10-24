@@ -50,3 +50,8 @@ node_modules/
 *.bak_cad
 
 crism_data/
+
+node_modules/
+dist/
+data-prep/raw/
+crism_data/

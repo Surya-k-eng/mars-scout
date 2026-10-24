@@ -7,6 +7,8 @@ import { lodViews } from '../../core/lodViews.js';
 //
 // Controls:  W A S D = walk   Shift = run   Arrow left/right = turn   Arrow up/down = look up/down
 //            R = drop Astro under the main camera   C = switch Astro's controls on/off
+//            After the two map points are picked, Astro starts on point A and walks the planned route to B by himself.
+//            F = restart the route from A   P = pause / resume   W/A/S/D = take over manual control
 //
 // This module only reads the 'terrain' object that WorldModule publishes (heightAt / gridToWorld / worldToGrid).
 // It does not touch lights, fog, background or the main camera's position.
@@ -18,9 +20,12 @@ const WALK = 6;                 // m/s
 const RUN_MULT = 5;
 const TURN = 1.8;               // rad/s
 const PITCH_MAX = 1.4;          // rad, how far up/down he can look
-const SMOOTH = 14;              // higher = follows the ground more tightly
+const SMOOTH = 40;              // how fast he settles DOWN onto the ground (going up he is never allowed below it)
+const CAM_CLEAR = 0.9;          // the camera always stays at least this far above any ground around it, metres
 const INSET_W = 560, INSET_H = 440, MARGIN = 16;   // second screen size in CSS pixels
 const BEACON = true;            // thin cyan pillar so you can find him from the main view
+const ROUTE_SPEED = 20;         // m/s while Astro walks the planned route (Shift = x RUN_MULT)
+const LOOK_AHEAD = 10;          // metres ahead on the path that he turns to face
 const BODY_LAYER = 1;
 const RING_M = 350;             // full-detail circle around Astro, metres, in every direction           // body is only drawn for the main camera, never in his own view
 
@@ -35,6 +40,8 @@ export class CharacterModule extends Module {
     this.yaw = 0; this.pitch = 0;
     this.snap = true;                         // next ground height is applied instantly
     this.busy = false;
+    this.route = null; this.routeSrc = null;  // planned route from MapPickModule (state 'route')
+    this.following = false; this.paused = false; this.routeS = 0;
     this.last = performance.now();
 
     // his eyes
@@ -69,6 +76,8 @@ export class CharacterModule extends Module {
       if (e.type === 'keydown') {
         if (!e.repeat && k === 'KeyR') this.respawn();
         if (!e.repeat && k === 'KeyC') this.enabled = !this.enabled;
+        if (!e.repeat && k === 'KeyF') this.startRoute();
+        if (!e.repeat && k === 'KeyP' && this.following) this.paused = !this.paused;
         if (!e.repeat && k === 'KeyV') this.coords.style.display = this.coords.style.display === 'none' ? 'block' : 'none';
         this.keys.add(k);
       } else {
@@ -144,6 +153,47 @@ export class CharacterModule extends Module {
     this.x = c.position.x;
     this.z = c.position.z;
     this.snap = true;
+    this.following = false;
+  }
+
+  // Highest known ground height at world x/z: the drawn surface (grid) and the route/pick sampler,
+  // whichever is higher, so he is never placed under either one. null = no data here.
+  groundAt(t, x, z) {
+    let h = null;
+    const { gx, gz } = t.worldToGrid(x, z);
+    if (!Number.isNaN(t.heightAt(gx, gz))) h = t.gridToWorld(gx, gz).y;
+    const w = t.sampleWorld?.(x, z);
+    if (w != null && Number.isFinite(w)) h = h == null ? w : Math.max(h, w);
+    return h;
+  }
+
+  // ---- walking the planned route -------------------------------------------------------------
+  loadRoute(points) {
+    const p = points.map((v) => ({ x: v.x, z: v.z }));
+    const cum = [0];
+    for (let i = 1; i < p.length; i++) cum.push(cum[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].z - p[i - 1].z));
+    this.route = { p, cum, total: cum[cum.length - 1] };
+  }
+
+  // x/z on the route after walking s metres along it
+  routePoint(s) {
+    const { p, cum, total } = this.route;
+    s = Math.max(0, Math.min(total, s));
+    let lo = 0, hi = cum.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (cum[m] <= s) lo = m; else hi = m; }
+    const seg = cum[hi] - cum[lo] || 1, t = (s - cum[lo]) / seg;
+    return { x: p[lo].x + (p[hi].x - p[lo].x) * t, z: p[lo].z + (p[hi].z - p[lo].z) * t };
+  }
+
+  // put Astro on point A, facing along the path, and start walking
+  startRoute() {
+    if (!this.route || this.route.total <= 0) return;
+    const a = this.routePoint(0), b = this.routePoint(LOOK_AHEAD);
+    this.x = a.x; this.z = a.z;
+    this.yaw = Math.atan2(-(b.x - a.x), -(b.z - a.z));   // forward = (-sin yaw, -cos yaw)
+    this.routeS = 0;
+    this.following = true; this.paused = false; this.enabled = true;
+    this.snap = true;
   }
 
   update() {
@@ -156,21 +206,44 @@ export class CharacterModule extends Module {
       this.registered = true;
       console.log('[astro] camera registered with the terrain');
     }
+    // a new route from the map module: jump to point A and start walking
+    const route = this.ctx.state.get('route');
+    if (route && route !== this.routeSrc && route.length > 1) {
+      this.routeSrc = route;
+      this.loadRoute(route);
+      this.startRoute();
+    }
     const now = performance.now();
     const dt = Math.min((now - this.last) / 1000, 0.1);
     this.last = now;
     const k = this.keys;
 
     if (this.enabled) {
-      if (k.has('ArrowLeft')) this.yaw += TURN * dt;
-      if (k.has('ArrowRight')) this.yaw -= TURN * dt;
+      if (!this.following) {                      // the path decides where he faces while he follows it
+        if (k.has('ArrowLeft')) this.yaw += TURN * dt;
+        if (k.has('ArrowRight')) this.yaw -= TURN * dt;
+      }
       if (k.has('ArrowUp')) this.pitch += TURN * dt;
       if (k.has('ArrowDown')) this.pitch -= TURN * dt;
       this.pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, this.pitch));
 
       const f = (k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0);
       const s = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0);
-      if (f || s) {
+      if (this.following && (f || s)) this.following = false;   // WASD = take over manually
+      if (this.following) {
+        if (!this.paused) {
+          const run = k.has('ShiftLeft') || k.has('ShiftRight') ? RUN_MULT : 1;
+          this.routeS += ROUTE_SPEED * run * dt;
+          const a = this.routePoint(this.routeS), b = this.routePoint(this.routeS + LOOK_AHEAD);
+          this.x = a.x; this.z = a.z;
+          if (Math.hypot(b.x - a.x, b.z - a.z) > 0.01) {
+            let d = Math.atan2(-(b.x - a.x), -(b.z - a.z)) - this.yaw;
+            d = Math.atan2(Math.sin(d), Math.cos(d));              // shortest turn
+            this.yaw += d * (1 - Math.exp(-6 * dt));
+          }
+          if (this.routeS >= this.route.total) this.following = false;   // arrived at B
+        }
+      } else if (f || s) {
         const run = k.has('ShiftLeft') || k.has('ShiftRight') ? RUN_MULT : 1;
         const sp = (WALK * run * dt) / Math.hypot(f, s);
         const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
@@ -185,10 +258,11 @@ export class CharacterModule extends Module {
     this.z = Math.max(-hz, Math.min(hz, this.z));
 
     // stand on the surface that is actually drawn (follows hills, crater walls and mountains)
-    const { gx, gz } = t.worldToGrid(this.x, this.z);
-    if (!Number.isNaN(t.heightAt(gx, gz))) {
-      const target = t.gridToWorld(gx, gz).y;
-      this.y = this.snap ? target : this.y + (target - this.y) * (1 - Math.exp(-SMOOTH * dt));
+    const target = this.groundAt(t, this.x, this.z);
+    if (target != null) {
+      // going up (or first frame): sit exactly on the ground, never below it; going down: settle quickly
+      if (this.snap || target > this.y) this.y = target;
+      else this.y += (target - this.y) * (1 - Math.exp(-SMOOTH * dt));
       this.snap = false;
     }
 
@@ -199,7 +273,16 @@ export class CharacterModule extends Module {
 
     this.group.position.set(this.x, this.y, this.z);
     this.group.rotation.y = this.yaw;
-    this.cam.position.set(this.x, this.y + EYE_H, this.z);
+    // camera: eye height, but pushed up if ANY ground around him (ahead, behind, sides) is higher,
+    // so a slope or crater wall in front of him can never cut into the camera
+    let camY = this.y + EYE_H;
+    const sn = Math.sin(this.yaw), cs = Math.cos(this.yaw);
+    const probes = [[0, 0], [-sn * 2, -cs * 2], [sn * 1.5, cs * 1.5], [cs * 1.5, -sn * 1.5], [-cs * 1.5, sn * 1.5]];
+    for (const [dx, dz] of probes) {
+      const h = this.groundAt(t, this.x + dx, this.z + dz);
+      if (h != null) camY = Math.max(camY, h + CAM_CLEAR);
+    }
+    this.cam.position.set(this.x, camY, this.z);
     this.cam.rotation.set(this.pitch, this.yaw, 0);
   }
 
@@ -239,7 +322,9 @@ export class CharacterModule extends Module {
     c.left = `${rect.right - w - MARGIN}px`;   // sits just under the Astro cam
     c.top = `${rect.top + MARGIN + h + 6}px`;
     c.width = `${w - 18}px`;
-    this.label.textContent = this.enabled ? 'ASTRO CAM  (C = off)' : 'ASTRO CAM  paused (C = on)';
+    this.label.textContent = !this.enabled ? 'ASTRO CAM  paused (C = on)'
+      : this.following ? `ASTRO CAM  on route ${Math.round((this.routeS / this.route.total) * 100)}%  (P = ${this.paused ? 'resume' : 'pause'}, WASD = manual)`
+      : this.route ? 'ASTRO CAM  (F = walk route again, C = off)' : 'ASTRO CAM  (C = off)';
   }
 
   updateCoords() {
