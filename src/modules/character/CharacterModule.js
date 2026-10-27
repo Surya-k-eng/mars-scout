@@ -18,6 +18,7 @@ const EYE_H = 1.5;              // camera height above the ground, metres
 const FOV = 70;
 const WALK = 6;                 // m/s
 const RUN_MULT = 5;
+const SPEED_STEPS = [0.25, 0.5, 1, 2, 4, 8, 16, 32];   // speed multipliers the - / + buttons step through (1 = normal)
 const TURN = 1.8;               // rad/s
 const PITCH_MAX = 1.4;          // rad, how far up/down he can look
 const SMOOTH = 40;              // how fast he settles DOWN onto the ground (going up he is never allowed below it)
@@ -25,7 +26,10 @@ const CAM_CLEAR = 0.9;          // the camera always stays at least this far abo
 const INSET_W = 560, INSET_H = 440, MARGIN = 16;   // second screen size in CSS pixels
 const BEACON = true;            // thin cyan pillar so you can find him from the main view
 const ROUTE_SPEED = 20;         // m/s while Astro walks the planned route (Shift = x RUN_MULT)
-const LOOK_AHEAD = 10;          // metres ahead on the path that he turns to face
+const LOOK_AHEAD = 40;          // metres ahead on the path that he turns to face (bigger = ignores small wiggles in the path)
+const ROUTE_STRAIGHTEN = 60;     // metres: Astro cuts across small bends of the planned route instead of tracing every curve (0 = follow the path exactly)
+const TURN_DEADZONE = 0.35;     // rad (~20 deg): while following the route the camera does NOT turn for bends smaller than this
+const ROUTE_TURN_RATE = 2;      // how quickly the camera swings round when it does turn (was 6; smaller = calmer)
 const BODY_LAYER = 1;
 const RING_M = 350;             // full-detail circle around Astro, metres, in every direction           // body is only drawn for the main camera, never in his own view
 
@@ -67,6 +71,29 @@ export class CharacterModule extends Module {
       'position:fixed;pointer-events:none;z-index:10;margin:0;padding:8px;display:none;' +
       'font:12px monospace;color:#9f9;background:rgba(0,0,0,.75);border:1px solid #444;border-radius:4px;';
     document.body.appendChild(this.coords);
+
+    // speed buttons under the Astro cam:  [ - ]  Speed x1  [ + ]
+    this.speedIdx = SPEED_STEPS.indexOf(1);
+    this.speedMul = 1;
+    this.speedBar = document.createElement('div');
+    this.speedBar.style.cssText =
+      'position:fixed;z-index:1001;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:4px 6px;' +
+      'background:rgba(0,0,0,.75);border:1px solid #444;border-radius:4px;font:600 12px system-ui,sans-serif;color:#fff;user-select:none;';
+    const mk = (txt, title, fn) => {
+      const b = document.createElement('button');
+      b.textContent = txt; b.title = title;
+      b.style.cssText = 'width:28px;height:24px;border-radius:4px;border:1px solid rgba(255,255,255,.35);background:#2d6cdf;color:#fff;font:700 15px/1 system-ui,sans-serif;cursor:pointer;padding:0;';
+      b.addEventListener('click', (e) => { fn(); b.blur(); e.stopPropagation(); });
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      return b;
+    };
+    this.speedTxt = document.createElement('span');
+    this.speedTxt.style.cssText = 'flex:1;text-align:center;cursor:pointer;white-space:nowrap;';
+    this.speedTxt.title = 'click = back to normal speed';
+    this.speedTxt.addEventListener('click', () => this.setSpeed(SPEED_STEPS.indexOf(1)));
+    this.speedBar.append(mk('\u2212', 'Slower', () => this.setSpeed(this.speedIdx - 1)), this.speedTxt, mk('+', 'Faster', () => this.setSpeed(this.speedIdx + 1)));
+    document.body.appendChild(this.speedBar);
+    this.setSpeed(this.speedIdx);
 
     // keyboard
     this.onKey = (e) => {
@@ -169,10 +196,37 @@ export class CharacterModule extends Module {
 
   // ---- walking the planned route -------------------------------------------------------------
   loadRoute(points) {
-    const p = points.map((v) => ({ x: v.x, z: v.z }));
+    let p = points.map((v) => ({ x: v.x, z: v.z }));
+    if (ROUTE_STRAIGHTEN > 0 && p.length > 2) p = this.straighten(p);
     const cum = [0];
     for (let i = 1; i < p.length; i++) cum.push(cum[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].z - p[i - 1].z));
     this.route = { p, cum, total: cum[cum.length - 1] };
+  }
+
+  // Smooth the path so small wiggles are cut straight; the start (A) and end (B) stay exactly where they are.
+  straighten(p) {
+    const cum = [0];
+    for (let i = 1; i < p.length; i++) cum.push(cum[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].z - p[i - 1].z));
+    const total = cum[cum.length - 1];
+    if (total < 1) return p;
+    const n = Math.max(2, Math.ceil(total / 2));                  // resample about every 2 m
+    let q = [], j = 0;
+    for (let i = 0; i <= n; i++) {
+      const sd = (i / n) * total;
+      while (j < cum.length - 2 && cum[j + 1] < sd) j++;
+      const seg = cum[j + 1] - cum[j] || 1, f = Math.min(1, Math.max(0, (sd - cum[j]) / seg));
+      q.push({ x: p[j].x + (p[j + 1].x - p[j].x) * f, z: p[j].z + (p[j + 1].z - p[j].z) * f });
+    }
+    const k = Math.max(1, Math.round(ROUTE_STRAIGHTEN / (total / n)));
+    for (let pass = 0; pass < 3; pass++) {                        // moving average; window shrinks to 0 at the ends so A and B are pinned
+      q = q.map((_, i) => {
+        const w = Math.min(k, i, n - i);
+        let sx = 0, sz = 0;
+        for (let m = i - w; m <= i + w; m++) { sx += q[m].x; sz += q[m].z; }
+        return { x: sx / (2 * w + 1), z: sz / (2 * w + 1) };
+      });
+    }
+    return q;
   }
 
   // x/z on the route after walking s metres along it
@@ -233,19 +287,21 @@ export class CharacterModule extends Module {
       if (this.following) {
         if (!this.paused) {
           const run = k.has('ShiftLeft') || k.has('ShiftRight') ? RUN_MULT : 1;
-          this.routeS += ROUTE_SPEED * run * dt;
+          this.routeS += ROUTE_SPEED * this.speedMul * run * dt;
           const a = this.routePoint(this.routeS), b = this.routePoint(this.routeS + LOOK_AHEAD);
           this.x = a.x; this.z = a.z;
           if (Math.hypot(b.x - a.x, b.z - a.z) > 0.01) {
             let d = Math.atan2(-(b.x - a.x), -(b.z - a.z)) - this.yaw;
             d = Math.atan2(Math.sin(d), Math.cos(d));              // shortest turn
-            this.yaw += d * (1 - Math.exp(-6 * dt));
+            // curvy but roughly straight stretch: keep looking straight ahead, only turn for the part beyond the dead zone
+            d = Math.abs(d) <= TURN_DEADZONE ? 0 : d - Math.sign(d) * TURN_DEADZONE;
+            this.yaw += d * (1 - Math.exp(-ROUTE_TURN_RATE * dt));
           }
           if (this.routeS >= this.route.total) this.following = false;   // arrived at B
         }
       } else if (f || s) {
         const run = k.has('ShiftLeft') || k.has('ShiftRight') ? RUN_MULT : 1;
-        const sp = (WALK * run * dt) / Math.hypot(f, s);
+        const sp = (WALK * this.speedMul * run * dt) / Math.hypot(f, s);
         const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
         this.x += (-sin * f + cos * s) * sp;      // forward = (-sin, -cos), right = (cos, -sin)
         this.z += (-cos * f - sin * s) * sp;
@@ -320,11 +376,21 @@ export class CharacterModule extends Module {
     this.updateCoords();
     const c = this.coords.style;
     c.left = `${rect.right - w - MARGIN}px`;   // sits just under the Astro cam
-    c.top = `${rect.top + MARGIN + h + 6}px`;
+    const sb = this.speedBar.style;                       // speed buttons sit right under the Astro cam
+    sb.left = `${rect.right - w - MARGIN}px`;
+    sb.top = `${rect.top + MARGIN + h + 6}px`;
+    sb.width = `${w - 18}px`;
+    c.top = `${rect.top + MARGIN + h + 6 + 36}px`;        // coordinates readout moves down below the buttons
     c.width = `${w - 18}px`;
     this.label.textContent = !this.enabled ? 'ASTRO CAM  paused (C = on)'
       : this.following ? `ASTRO CAM  on route ${Math.round((this.routeS / this.route.total) * 100)}%  (P = ${this.paused ? 'resume' : 'pause'}, WASD = manual)`
       : this.route ? 'ASTRO CAM  (F = walk route again, C = off)' : 'ASTRO CAM  (C = off)';
+  }
+
+  setSpeed(i) {
+    this.speedIdx = Math.max(0, Math.min(SPEED_STEPS.length - 1, i));
+    this.speedMul = SPEED_STEPS[this.speedIdx];
+    this.speedTxt.textContent = `Speed \u00d7${this.speedMul}`;
   }
 
   updateCoords() {
@@ -361,5 +427,6 @@ export class CharacterModule extends Module {
     for (const g of this.geos || []) g.dispose();
     for (const m of this.mats || []) m.dispose();
     this.coords?.remove();
+    this.speedBar?.remove();
   }
 }

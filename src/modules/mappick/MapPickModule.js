@@ -58,6 +58,8 @@ const PLAN = {
   lineWidthPx: 1.2,     // line radius on screen, in pixels (stays the same at any zoom)
   minRadius: 0.5,       // never thinner than this (world units)
   color: 0x39ff88,
+  pathWidthM: 30,       // width of the path painted INTO the terrain, in world units (metres)
+  maskSize: 4096,       // resolution of the path mask texture (longest side, pixels)
 };
 
 class MinHeap {
@@ -559,6 +561,48 @@ export class MapPickModule extends Module {
     return r.width > 20 && r.height > 20 ? r : null;
   }
 
+  // Find a panel made by another module: by the text it contains, then climb to its dark background box.
+  findPanel(key, re) {
+    this._pn = this._pn || {};
+    const c = this._pn[key] || (this._pn[key] = { el: null, t: 0 });
+    if (!c.el || !c.el.isConnected) {
+      c.el = null;
+      const now = performance.now();
+      if (now - c.t < 500) return null;                            // scan at most twice a second
+      c.t = now;
+      const mine = (n) => n === this.featCv || this.featBox?.contains(n) || this.coordBox?.contains(n) || this.panel?.contains(n) || this.hud?.contains(n);
+      const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let el = null;
+      for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+        if (re.test(n.nodeValue) && n.parentElement && !mine(n.parentElement)) { el = n.parentElement; break; }
+      }
+      while (el && el !== document.body) {                         // climb to the box that has its own background
+        const m = getComputedStyle(el).backgroundColor.match(/rgba?\(([^)]+)\)/);
+        const a = m ? (m[1].split(',')[3] === undefined ? 1 : parseFloat(m[1].split(',')[3])) : 0;
+        const r = el.getBoundingClientRect();
+        if (a > 0.3 && r.width > 150 && r.height > 50) break;
+        el = el.parentElement;
+      }
+      c.el = el && el !== document.body ? el : null;
+    }
+    return c.el;
+  }
+
+  // Every on-screen box that must stay free of circles and labels.
+  blockedRects() {
+    const out = [];
+    const add = (r) => { if (r && r.width > 20 && r.height > 20) out.push(r); };
+    add(this.astroCamRect());
+    const els = [this.findPanel('time', /\bsunset\b/i), this.coordBox, this.panel, this.panelBtn, this.hud, this.featBox];
+    for (const el of els) {
+      if (!el || !el.isConnected) continue;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+      add(el.getBoundingClientRect());
+    }
+    return out;
+  }
+
   // Draw every feature inside the view on a 2D canvas over the map. Craters etc. are drawn at their
   // true size; labels are skipped where they would overlap (bigger features get priority).
   drawFeatures() {
@@ -576,14 +620,7 @@ export class MapPickModule extends Module {
     this.featHits = [];
     this.featOrigin = { left: r.left, top: r.top };
     if (!this.showFeat || !this.features || !this.terrain) return;
-    const ac = this.astroCamRect();
-    g.save();
-    if (ac) {                                                      // keep circles / labels off the Astro Cam inset
-      g.beginPath();
-      g.rect(0, 0, w, h);
-      g.rect(ac.left - r.left, ac.top - r.top, ac.width, ac.height);
-      g.clip('evenodd');
-    }
+    const blocked = this.blockedRects();
 
     // whole loaded map area, read fresh every frame (it moves when the world recenters), plus a small margin
     const cam = this.ctx.camera, t = this.terrain;
@@ -657,7 +694,7 @@ export class MapPickModule extends Module {
         g.fillStyle = '#fff'; g.fillText(f.name, lx, ly);
       }
     }
-    g.restore();
+    for (const q of blocked) g.clearRect(q.left - r.left, q.top - r.top, q.width, q.height);   // nothing drawn over the panels
     if (this.featCnt && this.featCount !== inRegion) {
       this.featCount = inRegion;
       this.featCnt.textContent = `${inRegion} features in this map area`;
@@ -999,72 +1036,115 @@ export class MapPickModule extends Module {
     pos.needsUpdate = true;
   }
 
-  // Solid where visible; blinking ghost where the route is hidden behind terrain/objects.
+  // The path is painted INTO the terrain: the route is rasterised into a small mask texture and the
+  // terrain material's fragment shader tints every pixel that falls on it. No 3D object floats on top,
+  // so the path follows the ground exactly and keeps the terrain's lighting/relief.
   drawRoute(points) {
     this.clearRoute();
-    const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal');
-    // unit-radius tube; the vertex shader below sets the real thickness from the camera distance,
-    // so the line keeps the same on-screen width (and clears the surface) at any zoom level.
-    this.routeGeo = new THREE.TubeGeometry(curve, points.length, 1, 6, false);
-    this.drapeAt = 0;
-    this.redrape();
+    let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+    for (const p of points) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }
+    const pad = PLAN.pathWidthM * 2;
+    x0 -= pad; z0 -= pad; x1 += pad; z1 += pad;
+    const w = x1 - x0, h = z1 - z0;
+    const mpp = Math.max(w, h) / PLAN.maskSize;                 // metres per mask pixel
+    const cw = Math.max(2, Math.ceil(w / mpp)), ch = Math.max(2, Math.ceil(h / mpp));
 
-    this.uK = { value: 0.003 };
-    this.uMinR = { value: PLAN.minRadius };
-    const mk = (opts) => {
-      const m = new THREE.MeshBasicMaterial(opts);
-      m.onBeforeCompile = (shader) => {
-        shader.uniforms.uK = this.uK;
-        shader.uniforms.uMinR = this.uMinR;
-        shader.vertexShader = shader.vertexShader
-          .replace('#include <common>', '#include <common>\nuniform float uK;\nuniform float uMinR;')
-          .replace('#include <begin_vertex>', `
-            vec3 rc = position - normal;                       // tube centre line
-            float rd = distance(cameraPosition, rc);
-            float rr = max(rd * uK, uMinR);                    // radius from distance
-            vec3 transformed = rc + normal * rr + vec3(0.0, rr, 0.0);          // tube rests ON the ground (lift = its own radius)
-          `);
-      };
-      m.customProgramCacheKey = () => 'routeTube';
-      return m;
+    const cv = document.createElement('canvas');
+    cv.width = cw; cv.height = ch;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#000'; g.fillRect(0, 0, cw, ch);
+    g.strokeStyle = '#fff'; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.lineWidth = Math.max(PLAN.pathWidthM / mpp, 2);
+    g.beginPath();
+    points.forEach((p, i) => {
+      const px = (p.x - x0) / mpp, py = (p.z - z0) / mpp;
+      if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+    });
+    g.stroke();
+
+    const tex = new THREE.CanvasTexture(cv);
+    tex.flipY = false;                                          // canvas row 0 = z0
+    tex.generateMipmaps = false;
+    tex.minFilter = tex.magFilter = THREE.LinearFilter;
+    if (THREE.NoColorSpace !== undefined) tex.colorSpace = THREE.NoColorSpace;
+    tex.needsUpdate = true;
+
+    this.routeTex = tex;
+    this.routeU = {
+      uRouteMask: { value: tex },
+      uRouteBox: { value: new THREE.Vector4(x0, z0, w, h) },
+      uRouteColor: { value: new THREE.Color(PLAN.color) },
+      uRouteOn: { value: 1 },
     };
 
-    // visible parts: solid
-    const solid = new THREE.Mesh(this.routeGeo, mk({ color: PLAN.color }));
-    solid.renderOrder = 999;
-    solid.frustumCulled = false;
-
-    // hidden parts only (drawn where the terrain is in front): blinking ghost
-    this.ghost = new THREE.Mesh(this.routeGeo, mk({
-      color: PLAN.color, transparent: true, opacity: 0.5,
-      depthFunc: THREE.GreaterDepth, depthWrite: false,
-    }));
-    this.ghost.renderOrder = 1000;
-    this.ghost.frustumCulled = false;
-
-    this.routeGroup.add(solid, this.ghost);
-
+    this.patchTerrainMaterials();
+    let scanAt = 0;
     const tick = (t) => {
       this.raf = requestAnimationFrame(tick);
-      const cam = this.ctx.camera;
-      const hpx = Math.max(1, this.ctx.renderer.domElement.clientHeight);
-      this.uK.value = PLAN.lineWidthPx * 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov ?? 50) / 2) / hpx;
-      this.ghost.material.opacity = 0.2 + 0.7 * (0.5 + 0.5 * Math.sin(t * 0.006));
-      // the drawn terrain changes detail as the camera moves: lay the path on it again
-      if (t - this.drapeAt > PLAN.drapeEveryMs) { this.drapeAt = t; this.redrape(); }
+      // the terrain creates new tiles as the camera moves: patch them too
+      if (t - scanAt > 400) { scanAt = t; this.patchTerrainMaterials(); }
     };
     this.raf = requestAnimationFrame(tick);
+  }
+
+  isTerrainMesh(o) {
+    return o.isMesh && o.geometry?.attributes?.position?.count > 1000;   // big meshes only (not pins etc.)
+  }
+
+  patchTerrainMaterials() {
+    if (!this.patched) this.patched = new WeakSet();
+    const skip = new Set([this.routeGroup, this.markers]);
+    this.ctx.scene.traverse((o) => {
+      if (skip.has(o) || !this.isTerrainMesh(o)) return;
+      for (const m of [].concat(o.material)) this.patchMaterial(m);
+    });
+  }
+
+  patchMaterial(m) {
+    if (!m || this.patched.has(m) || m.isShaderMaterial) return;
+    this.patched.add(m);
+    const prev = m.onBeforeCompile;
+    const U = () => this.routeU;
+    m.onBeforeCompile = (shader, renderer) => {
+      prev?.call(m, shader, renderer);
+      if (!shader.fragmentShader.includes('#include <dithering_fragment>')) return;
+      const u = U() || {};
+      Object.assign(shader.uniforms, u);
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec2 vRouteXZ;')
+        .replace('#include <project_vertex>', `#include <project_vertex>
+          vRouteXZ = (modelMatrix * vec4(transformed, 1.0)).xz;`);
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', `#include <common>
+          varying vec2 vRouteXZ;
+          uniform sampler2D uRouteMask;
+          uniform vec4 uRouteBox;
+          uniform vec3 uRouteColor;
+          uniform float uRouteOn;`)
+        .replace('#include <dithering_fragment>', `
+          {
+            vec2 ruv = (vRouteXZ - uRouteBox.xy) / uRouteBox.zw;
+            if (uRouteOn > 0.5 && ruv.x >= 0.0 && ruv.x <= 1.0 && ruv.y >= 0.0 && ruv.y <= 1.0) {
+              float rm = smoothstep(0.2, 0.7, texture2D(uRouteMask, ruv).r);
+              gl_FragColor.rgb = mix(gl_FragColor.rgb, uRouteColor, rm * 0.95);
+            }
+          }
+          #include <dithering_fragment>`);
+    };
+    m.customProgramCacheKey = () => 'routePaint|' + (prev ? prev.toString() : '');
+    m.needsUpdate = true;
   }
 
   clearRoute() {
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = null;
+    if (this.routeU) this.routeU.uRouteOn.value = 0;   // materials stay patched, the path just stops drawing
+    this.routeTex?.dispose();
+    this.routeTex = null;
+    this.routeU = null;
     for (const c of [...this.routeGroup.children]) {
-      this.routeGroup.remove(c); c.material?.dispose?.(); if (c.geometry !== this.routeGeo) c.geometry?.dispose?.();
+      this.routeGroup.remove(c); c.material?.dispose?.(); c.geometry?.dispose?.();
     }
-    this.routeGeo?.dispose();
-    this.routeGeo = null;
-    this.ghost = null;
   }
 
   // ===================== HUD / info box =====================
@@ -1199,8 +1279,7 @@ export class MapPickModule extends Module {
       <div>Max slope on route: <b>${maxSlope.toFixed(1)}°</b> <span style="opacity:.7">(limit ${limit}°${limit > PLAN.maxSlopeDeg ? ', relaxed: no gentler way exists' : ''})</span></div>
       <div style="font-weight:600;margin:8px 0 2px">Legend</div>
       <div>${dot('#ff3030')}Selected points</div>
-      <div>${bar('#39ff88')}Planned route (visible)</div>
-      <div>${bar('#39ff88', 'opacity:0.4')}Route hidden behind terrain (blinks)</div>
+      <div>${bar('#39ff88')}Planned route (painted into the terrain)</div>
       <div>${bar('#ffd23f')}Straight line (reference)</div>`;
     document.body.append(btn, d);
   }
