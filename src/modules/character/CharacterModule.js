@@ -14,7 +14,7 @@ import { lodViews } from '../../core/lodViews.js';
 // It does not touch lights, fog, background or the main camera's position.
 
 const BODY_R = 0.85;            // ball radius, metres  (diameter 1.7 m = 170 cm tall)
-const EYE_H = 1.5;              // camera height above the ground, metres
+const EYE_H = 2.3;              // camera height above the ground, metres
 const FOV = 70;
 const WALK = 6;                 // m/s
 const RUN_MULT = 5;

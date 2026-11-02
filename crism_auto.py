@@ -1,4 +1,5 @@
-﻿import sys, os, re, math, requests, rasterio
+﻿
+import sys, os, re, math, requests, rasterio
 from rasterio.windows import from_bounds, Window
 
 if len(sys.argv) < 3:

@@ -6,3 +6,63 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
 /* front layer: HTML interface. Empty areas let clicks fall through to the 3D scene. */
 #ui { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
 #ui button, #ui input, #ui select, #ui .panel { pointer-events: auto; }
+
+.pg-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+.pg-grid .ttl-card {
+  aspect-ratio: 3 / 4;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px;
+  text-align: left;
+}
+.pg-grid .ttl-ico { width: 44px; height: 44px; }
+.pg-grid .ttl-tx { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
+.pg-grid .ttl-more { align-self: flex-end; }
+
+/* On narrow screens, stack them but keep them tall */
+@media (max-width: 600px) {
+  .pg-grid { grid-template-columns: 1fr; }
+  .pg-grid .ttl-card { aspect-ratio: auto; min-height: 140px; }
+}
+
+.ttl-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;          /* keeps the image and overlay behind the text */
+}
+
+.ttl-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -2;
+  transition: transform .5s ease;
+  pointer-events: none;
+}
+
+/* dark gradient so the text stays readable over the bright orange */
+.ttl-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to top, rgba(0,0,0,.78) 0%, rgba(0,0,0,.35) 55%, rgba(0,0,0,.15) 100%);
+  transition: background .3s ease;
+}
+
+.ttl-card:hover .ttl-bg { transform: scale(1.06); }
+.ttl-card:hover::before {
+  background: linear-gradient(to top, rgba(0,0,0,.7) 0%, rgba(0,0,0,.25) 55%, rgba(0,0,0,.05) 100%);
+}
+
+.ttl-card .ttl-ct,
+.ttl-card .ttl-cd { text-shadow: 0 1px 6px rgba(0,0,0,.6); }

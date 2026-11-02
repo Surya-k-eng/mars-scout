@@ -184,6 +184,7 @@ export class AtmosphereModule extends Module {
 
   async init() {
     const { scene, renderer } = this.ctx;
+    this.mapPickMode = false;
     this.alive = true;
 
     // remember what we change so dispose() can put it back
@@ -296,7 +297,10 @@ export class AtmosphereModule extends Module {
       presets: PRESETS,
       get current() { return self.name; },
       get paused() { return self.paused; },
-      get sun() { return self.sun; },                          // { ls, ltst, elev, azim, dec }
+      get sun() { return self.sun; },
+      setMapPickMode: (on) => {
+        this.mapPickMode = Boolean(on);
+      },                          // { ls, ltst, elev, azim, dec }
       setPreset: (name, snap = false) => this.setPreset(name, snap),
       setLocalHour: (h) => this.jumpToLocalHour(h),            // 0..24 local true solar time
       setSpeed: (x) => { this.timeScale = x; },                // 1 = real time
@@ -418,7 +422,7 @@ export class AtmosphereModule extends Module {
     u.uSunDir.value.copy(this.sunDir);
     u.uGlowStrength.value = s.glowStrength; u.uDust.value = s.dust;
 
-    if (scene.fog) { scene.fog.color.copy(s.fog); scene.fog.density = s.fogDensity * FOG_SCALE; }
+    if (scene.fog) { scene.fog.color.copy(s.fog); scene.fog.density = s.fogDensity * FOG_SCALE * (this.mapPickMode ? 0:1); }
 
     this.sunLight.color.copy(s.sunLight);
     this.sunLight.intensity = s.sunIntensity;

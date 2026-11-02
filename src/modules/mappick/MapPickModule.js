@@ -58,7 +58,7 @@ const PLAN = {
   lineWidthPx: 1.2,     // line radius on screen, in pixels (stays the same at any zoom)
   minRadius: 0.5,       // never thinner than this (world units)
   color: 0x39ff88,
-  pathWidthM: 30,       // width of the path painted INTO the terrain, in world units (metres)
+  pathWidthM: 10,       // width of the path painted INTO the terrain, in world units (metres)
   maskSize: 4096,       // resolution of the path mask texture (longest side, pixels)
 };
 
@@ -154,6 +154,13 @@ export class MapPickModule extends Module {
 
   async init() {
     this.active = false;
+    // 'coordinates' (default) or 'landmarks'. Set by the page-2 buttons before this module starts:
+    //   ctx.state.set('searchMode', 'landmarks')
+    // Clicking the map and typing coordinates work in BOTH modes; 'landmarks' adds the search bar.
+    this.mode = this.ctx.state.get('searchMode') || 'coordinates';
+    // The title-screen buttons are clicked AFTER this module has started, so the mode can also change at runtime:
+    //   ctx.bus.emit('search:mode', 'landmarks')   (or 'coordinates')
+    if (this.ctx.bus?.on) this._offMode = this.ctx.bus.on('search:mode', (m) => this.setMode(m));
     this.picks = [];
     this.markers = new THREE.Group();
     this.ctx.scene.add(this.markers);
@@ -211,6 +218,7 @@ export class MapPickModule extends Module {
     cam.updateProjectionMatrix();
 
     this.active = true;
+    this.ctx.state.get('atmosphere')?.setMapPickMode(true);
     this.picks = [];
     this.ctx.state.set('mode', 'map');
     this.makeHud();
@@ -635,7 +643,7 @@ export class MapPickModule extends Module {
     cam.matrixWorldInverse.copy(cam.matrixWorld).invert();
     const tanH = Math.tan(THREE.MathUtils.degToRad(cam.fov ?? 50) / 2);
     const v = this._fv || (this._fv = new THREE.Vector3());
-    const lonC = t.lonC;
+    const lonC = t.lonMid;
     const used = [];
     const rings = [];                                              // circles already drawn this frame
     if (this._sortedFor !== this.features) {                       // biggest first, so the big crater keeps its circle
@@ -681,6 +689,10 @@ export class MapPickModule extends Module {
       }
       g.globalAlpha = 1;
       this.featHits.push({ f, sx, sy, r: Math.max(f.circle ? rpx : 0, 8) });
+      if (f === this.focusFeat) {                                   // the landmark the user just searched for
+        g.globalAlpha = 1; g.lineWidth = 2.5; g.strokeStyle = '#ffffff';
+        g.beginPath(); g.arc(sx, sy, Math.max(f.circle ? rpx : 0, 9) + 6, 0, Math.PI * 2); g.stroke();
+      }
 
       if (labels < 250 && (!f.circle || rpx >= 8)) {
         const tw = g.measureText(f.name).width;
@@ -737,6 +749,7 @@ export class MapPickModule extends Module {
   exit(clearMarkers = true, dispose = false) {
     if (this.waitTimer) { clearInterval(this.waitTimer); this.waitTimer = null; }
     if (!this.active && !(dispose && this.flatView)) return;
+    this.ctx.state.get('atmosphere')?.setMapPickMode(false);
     const cam = this.ctx.camera, s = this.saved;
 
     if (FLAT_ONLY && !dispose) {
@@ -1158,7 +1171,177 @@ export class MapPickModule extends Module {
     });
     document.body.appendChild(d);
     this.makeCoordBox();
+    if (this.mode === 'landmarks') this.makeLandmarkBox();
     this.updateHud();
+  }
+
+  // Switch between 'coordinates' and 'landmarks' while running (called from the title-screen buttons).
+  setMode(mode) {
+    this.mode = mode === 'landmarks' ? 'landmarks' : 'coordinates';
+    this.ctx.state.set('searchMode', this.mode);
+    if (!this.hud) return;                                   // HUD not built yet: makeHud() will read this.mode
+    if (this.mode === 'landmarks' && !this.lmBox) this.makeLandmarkBox();
+    if (this.mode !== 'landmarks') this.removeLandmarkBox();
+    this.updateHud();
+  }
+
+  removeLandmarkBox() {
+    this.lmBox?.remove(); this.lmBox = null; this.lmInput = null; this.lmList = null; this.lmMsg = null; this.lmInfo = null;
+    this.focusFeat = null;
+  }
+
+  // ---- search a landmark by name (autocomplete) ----
+  // Typing filters the gazetteer; picking a result moves the map to it and zooms to fit.
+  // It does NOT place a pin: you still click the map (or type coordinates) to mark points.
+  makeLandmarkBox() {
+    const box = this.lmBox = document.createElement('div');
+    Object.assign(box.style, {
+      position: 'fixed', left: '50%', top: '58px', transform: 'translateX(-50%)',
+      width: 'min(360px, 92vw)', zIndex: 1002, font: '13px system-ui, sans-serif',
+    });
+    const input = this.lmInput = document.createElement('input');
+    input.type = 'text'; input.placeholder = 'Search a landmark, e.g. Gale, Olympus, Jezero…';
+    input.autocomplete = 'off'; input.spellcheck = false;
+    Object.assign(input.style, {
+      width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: '8px',
+      border: '1px solid rgba(255,255,255,0.35)', background: 'rgba(0,0,0,0.78)', color: '#fff',
+      font: '14px system-ui, sans-serif', outline: 'none',
+    });
+    const list = this.lmList = document.createElement('div');
+    Object.assign(list.style, {
+      display: 'none', marginTop: '4px', background: 'rgba(16,18,24,0.95)', borderRadius: '8px',
+      border: '1px solid rgba(255,255,255,0.2)', overflow: 'hidden', boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+    });
+    const msg = this.lmMsg = document.createElement('div');
+    msg.style.cssText = 'margin-top:4px;padding:0 4px;font-size:12px;min-height:14px;color:#ffb4b4;text-align:center';
+    // side window: short summary of the highlighted suggestion (hover or arrow keys)
+    const info = this.lmInfo = document.createElement('div');
+    Object.assign(info.style, {
+      display: 'none', pointerEvents: 'none', boxSizing: 'border-box', padding: '10px 12px',
+      background: 'rgba(16,18,24,0.95)', color: '#fff', font: '12px/1.45 system-ui, sans-serif',
+      borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+    });
+
+    let items = [], sel = -1;
+    const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    const render = () => {
+      list.innerHTML = '';
+      if (!items.length) { list.style.display = 'none'; paint(); return; }
+      items.forEach((f, i) => {
+        const row = document.createElement('div');
+        const dia = f.diameter >= 100 ? f.diameter.toFixed(0) : f.diameter.toFixed(1);
+        row.innerHTML = `<span style="color:${FEATURE_COLORS[f.kind]};font-weight:600">${esc(f.name)}</span>` +
+          `<span style="opacity:.65;margin-left:8px;font-size:12px">${esc(f.type.split(',')[0])}${f.diameter ? ` · ${dia} km` : ''}</span>`;
+        Object.assign(row.style, {
+          padding: '7px 12px', cursor: 'pointer', background: 'transparent',
+        });
+        row.onmouseenter = () => { sel = i; paint(); };
+        row.onmousedown = (e) => { e.preventDefault(); choose(f); };   // mousedown, so the input keeps focus
+        list.appendChild(row);
+      });
+      list.style.display = 'block';
+      paint();
+    };
+    // highlight the selected row and show its summary in the side window (no rebuild, so hover stays smooth)
+    const row2 = (k, v) => `<div style="display:flex;gap:8px"><span style="opacity:.55;min-width:62px">${k}</span><span style="flex:1">${v}</span></div>`;
+    const summary = (f) => {
+      const kind = f.type.split(',')[0] || 'Feature';
+      const dia = f.diameter >= 100 ? f.diameter.toFixed(0) : f.diameter.toFixed(1);
+      const inside = this.landmarkInArea(f);
+      const clamp = 'display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden';
+      return `<div style="font-weight:600;font-size:14px;color:${FEATURE_COLORS[f.kind]}">${esc(f.name)}</div>` +
+        `<div style="opacity:.8;margin-bottom:6px">${esc(kind)}${f.diameter ? ` · about ${dia} km across` : ''}</div>` +
+        row2('Location', `${fmtLat(f.lat)}, ${fmtLon(f.lon)}`) +
+        (f.origin ? row2('Named for', `<span style="${clamp}">${esc(f.origin)}</span>`) : '') +
+        (f.approval ? row2('Status', `${esc(f.approval)}${f.year ? ` (${f.year})` : ''}`) : '') +
+        `<div style="margin-top:6px;font-size:11px;color:${inside ? '#b6f0b6' : '#ffb4b4'}">${inside ? 'Inside the loaded map area' : 'Outside the loaded map area'}</div>`;
+    };
+    const paint = () => {
+      [...list.children].forEach((r, i) => { r.style.background = i === sel ? 'rgba(255,255,255,0.16)' : 'transparent'; });
+      const f = items.length && sel >= 0 ? items[sel] : null;
+      if (!f) { info.style.display = 'none'; return; }
+      info.innerHTML = summary(f);
+      if (window.innerWidth >= 900) {                        // wide screens: window to the right of the list
+        Object.assign(info.style, { position: 'absolute', left: 'calc(100% + 10px)', top: `${input.offsetHeight + 4}px`, width: '250px', marginTop: '0' });
+      } else {                                               // narrow screens: under the list instead
+        Object.assign(info.style, { position: 'static', left: '', top: '', width: '100%', marginTop: '4px' });
+      }
+      info.style.display = 'block';
+    };
+    const search = () => {
+      msg.textContent = '';
+      const q = input.value.trim().toLowerCase();
+      items = []; sel = -1;
+      if (!q) { render(); return; }
+      if (!this.features) { msg.textContent = this.featStatus || 'Landmarks are still loading…'; render(); return; }
+      const starts = [], contains = [];
+      for (const f of this.features) {                       // already sorted biggest-first
+        if (!f.name) continue;
+        const n = f._lc || (f._lc = f.name.toLowerCase());
+        const k = n.indexOf(q);
+        if (k === 0) starts.push(f); else if (k > 0) contains.push(f);
+        if (starts.length >= 8) break;
+      }
+      items = starts.concat(contains).slice(0, 8);
+      if (!items.length) msg.textContent = 'No landmark found with that name.';
+      render();
+    };
+    const choose = (f) => {
+      if (this.busy) return;
+      const ok = this.centerOn(f);
+      if (ok) {
+        input.value = f.name; items = []; render();
+        msg.style.color = '#b6f0b6';
+        msg.textContent = `${f.name} centred. Click the map to mark your points.`;
+      } else {
+        msg.style.color = '#ffb4b4';
+        msg.textContent = `${f.name} is outside the loaded map area.`;
+      }
+    };
+    input.addEventListener('input', () => { msg.style.color = '#ffb4b4'; search(); });
+    input.addEventListener('focus', () => { if (input.value.trim()) search(); });
+    input.addEventListener('blur', () => setTimeout(() => { items = []; render(); }, 120));
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();                                   // typing must not trigger other shortcuts
+      if (e.key === 'ArrowDown' && items.length) { sel = (sel + 1) % items.length; paint(); e.preventDefault(); }
+      else if (e.key === 'ArrowUp' && items.length) { sel = (sel - 1 + items.length) % items.length; paint(); e.preventDefault(); }
+      else if (e.key === 'Enter') { const f = items[sel >= 0 ? sel : 0]; if (f) choose(f); }
+      else if (e.key === 'Escape') { items = []; render(); input.blur(); }
+    });
+    box.append(input, list, info, msg);
+    document.body.appendChild(box);
+  }
+
+  // World position of a landmark, using the same longitude convention as drawFeatures().
+  landmarkWorld(f) {
+    const t = this.terrain;
+    const lon = f.lon + 360 * Math.round((t.lonMid - f.lon) / 360);
+    return t.lonLatToWorld(lon, f.lat);
+  }
+
+  // Is the landmark inside the currently loaded map area (so it can be centred)?
+  landmarkInArea(f) {
+    const r = this.rect;
+    if (!r || !this.terrain) return false;
+    const w = this.landmarkWorld(f);
+    return w.x >= r.x0 && w.x <= r.x1 && w.z >= r.z0 && w.z <= r.z1;
+  }
+
+  // Move the map to a landmark and zoom so it fills ~40% of the screen height. No pin is added.
+  // Returns false when the landmark is outside the loaded map area.
+  centerOn(f) {
+    const cam = this.ctx.camera;
+    if (!this.landmarkInArea(f)) return false;
+    const w = this.landmarkWorld(f);
+    cam.position.x = w.x;
+    cam.position.z = w.z;
+    const tanH = Math.tan(THREE.MathUtils.degToRad(cam.fov ?? 50) / 2);
+    const want = f.circle && f.diameter ? (f.diameter * 1000) / (0.4 * tanH) : 8000;   // diameter km -> metres
+    const ground = this.terrain.sampleWorld(w.x, w.z) ?? 0;
+    cam.position.y = THREE.MathUtils.clamp(want, MIN_HEIGHT, this.hMax);
+    this.focusFeat = f;                                      // drawFeatures() rings it
+    this.hideTip?.();
+    return true;
   }
 
   // ---- pick by typing coordinates ----
@@ -1238,13 +1421,19 @@ export class MapPickModule extends Module {
 
   updateHud() {
     if (this.coordBox) this.coordBox.style.display = this.busy ? 'none' : 'flex';
+    if (this.lmBox) this.lmBox.style.display = this.busy ? 'none' : 'block';
+    const how = this.mode === 'landmarks'
+      ? 'search a landmark above, click the map, or type coordinates below'
+      : 'click the map or type coordinates below';
     if (this.hud) this.hud.textContent = this.busy ? 'Planning route…' :
-      `Map view: click point ${Math.min(this.picks.length + 1, 2)} of 2  (click the map or type coordinates below, Esc = skip)`;
+      `Map view: click point ${Math.min(this.picks.length + 1, 2)} of 2  (${how}, Esc = skip)`;
   }
 
   removeHud() {
     this.hud?.remove(); this.hud = null;
     this.coordBox?.remove(); this.coordBox = null;
+    this.lmBox?.remove(); this.lmBox = null; this.lmInput = null; this.lmList = null; this.lmMsg = null; this.lmInfo = null;
+    this.focusFeat = null;
   }
 
   showPanel({ a, b, straight, routeLen, maxSlope, limit }) {
@@ -1258,11 +1447,26 @@ export class MapPickModule extends Module {
     // toggle button (top-left): hidden by default, click to open / close the info box
     const btn = this.panelBtn = document.createElement('button');
     btn.textContent = 'Route info ▸';
+    
     Object.assign(btn.style, {
-      position: 'fixed', left: '16px', top: '16px', padding: '6px 12px',
-      background: 'rgba(0,0,0,0.78)', color: '#fff', border: '1px solid rgba(255,255,255,0.35)',
-      borderRadius: '6px', font: '13px system-ui, sans-serif', cursor: 'pointer', zIndex: 1001,
+      position: 'fixed',
+      left: '300px',
+      top: '200px',
+      zIndex: 99999,
+
+      padding: '10px 18px',
+      color: '#f5e6d3',
+      border: '1px solid rgba(207, 104, 63, 0.65)',
+      borderRadius: '10px',
+      font: '500 13px system-ui, sans-serif',
+      cursor: 'pointer',
+      zIndex: 1001,
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      boxShadow: '0 4px 18px rgba(0, 0, 0, 0.3)',
+      transition: 'background 0.2s ease, border-color 0.2s ease',
     });
+
     btn.onclick = () => {
       const open = d.style.display === 'none';
       d.style.display = open ? 'block' : 'none';
@@ -1293,6 +1497,7 @@ export class MapPickModule extends Module {
     super.dispose();
     if (this.pinRaf) cancelAnimationFrame(this.pinRaf);
     this.pinRaf = null;
+    if (typeof this._offMode === 'function') this._offMode();
     this.exit(true, true);
     this.removeFeatureUI();
     this.removeHud();

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Module } from '../../core/Module.js';
 import { EVENTS } from '../../core/events.js';
 import { lodViews } from '../../core/lodViews.js';
+import { OverlayLegend } from './OverlayLegend.js';
 
 // Flat, simple terrain (like the old TerrainModule) fed by two blended layers (like WorldModule).
 // No camera control, no HUD, no fog: it only builds the ground and exposes height lookups.
@@ -98,9 +99,53 @@ const RM = 3396190;                 // Mars radius, metres
 const D2R = Math.PI / 180;
 const M = RM * D2R;                 // metres per degree (same scale in x and z, so source pixels stay square)
 
+// Optional data overlay (mineral maps etc.), drawn per pixel from a small lon/lat texture. Toggle with the O key or
+// terrain.setOverlay(name | null). Files come from cropoverlay.py: <TILES>overlays/<name>.png and <name>.json.
+const OVERLAYS = ['olivine', 'pyroxene', 'grc_fe', 'grc_si', 'grc_h2o', 'grc_mafic', 'geology'];
+// Text shown in the layers panel. A new map = its .png/.json in tiles/overlays/ + its name in OVERLAYS + an entry here.
+// `scale` labels the two ends of the colour bar (the .json holds no real numbers, so it is relative: less -> more).
+const OVERLAY_INFO = {
+  olivine: { label: 'Olivine',
+    what: 'Where infrared spectra show olivine, a green iron-magnesium mineral typical of fresh volcanic rock. It breaks down quickly in water, so strong signals mark rock that stayed dry.' },
+  pyroxene: { label: 'Pyroxene',
+    what: 'Where infrared spectra show pyroxene, a common mineral in volcanic (basaltic) rock. It is widespread in the Martian crust; stronger colour = more pyroxene.' },
+  grc_fe: { label: 'Iron (GRS)',
+    what: 'Iron in the top metre or so of ground, from the Gamma Ray Spectrometer on Mars Odyssey. Brighter = more iron-rich.' },
+  grc_si: { label: 'Silicon (GRS)',
+    what: 'Silicon in the top metre or so of ground, from the Gamma Ray Spectrometer. It separates rock and soil types. Brighter = more silicon.' },
+  grc_h2o: { label: 'Water-equivalent hydrogen (GRS)',
+    what: 'Hydrogen in the top metre or so, expressed as water. High values suggest buried water ice or water-bearing minerals: a key place to look for resources.' },
+  grc_mafic: { label: 'Mafic index (GRS)',
+    what: 'Index of dark, iron- and magnesium-rich (mafic, basaltic) ground. Brighter = more mafic.' },
+  geology: { label: 'Geologic units',
+    what: 'Geologic map of Mars: each colour is one rock unit. The colour family shows its age: orange Noachian (oldest), green Hesperian, blue Amazonian (youngest).' },
+};
+const PERIOD_ORDER = ['Noachian', 'Hesperian/Noachian', 'Hesperian', 'Amazonian/Hesperian', 'Amazonian/Noachian', 'Amazonian'];
+const PERIOD_LABEL = { Noachian: 'Noachian (oldest)', Amazonian: 'Amazonian (youngest)' };
+const OV_PARS = `
+uniform sampler2D uOvTex;      // grey value = strength (0..1)
+uniform sampler2D uOvLut;      // 256 x 1 colour ramp (sRGB)
+uniform vec4 uOvBox;           // west, east, south, north (degrees)
+uniform vec2 uOvOrigin;        // lon, lat of the world origin (moves on recenter)
+uniform float uOvAmount;       // 0 = off, otherwise the opacity
+uniform float uOvAlpha;        // strongest alpha the map reaches
+uniform float uOvCat;          // 1 = categorical map (pixel value = unit number): every unit fully opaque
+`;
+const OV_COLOR = `
+if (uOvAmount > 0.0) {
+  vec2 ovLL = vec2(uOvOrigin.x + vDPos.x / ${M.toFixed(6)}, uOvOrigin.y - vDPos.z / ${M.toFixed(6)});
+  vec2 ovUV = vec2((ovLL.x - uOvBox.x) / (uOvBox.y - uOvBox.x), (uOvBox.w - ovLL.y) / (uOvBox.w - uOvBox.z));
+  float ovIn = float(ovUV.x >= 0.0 && ovUV.x <= 1.0 && ovUV.y >= 0.0 && ovUV.y <= 1.0);
+  float ovT = texture2D(uOvTex, clamp(ovUV, 0.0, 1.0)).r * ovIn;
+  vec3 ovC = pow(texture2D(uOvLut, vec2((floor(ovT * 255.0 + 0.5) + 0.5) / 256.0, 0.5)).rgb, vec3(2.2));
+  float ovA = uOvCat > 0.5 ? step(0.5 / 255.0, ovT) : ovT;
+  diffuseColor.rgb = mix(diffuseColor.rgb, ovC, ovA * uOvAlpha * uOvAmount);
+}
+`;
+
 const TILES = (import.meta.env.VITE_TILES_URL ?? `${import.meta.env.BASE_URL}tiles/`).replace(/\/?$/, '/');
 const LAYERS = [                    // later entries are sharper and win where they have data
-  { name: 'Regional 200 m', path: 'regional' },
+  { name: 'Global', path: 'global' },
   { name: 'HiRISE DTM', path: 'hirise' },
 ];
 
@@ -165,6 +210,20 @@ export class WorldModule extends Module {
     this.pv = new THREE.Matrix4();
     this.camPos = new THREE.Vector3();
     this.mats = [];
+
+    // overlay state: blank 1x1 textures keep the samplers valid until a map is loaded
+    const blank = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1, THREE.RGBAFormat);
+    blank.needsUpdate = true;
+    this.ovU = {
+      uOvTex: { value: blank }, uOvLut: { value: blank },
+      uOvBox: { value: new THREE.Vector4(0, 1, 0, 1) },
+      uOvOrigin: { value: new THREE.Vector2(this.lonC, this.latC) },
+      uOvAmount: { value: 0 }, uOvAlpha: { value: 0.86 }, uOvCat: { value: 0 },
+    };
+    this.overlays = new Map();
+    this.overlayMetas = new Map();
+    this.overlayName = null;
+    this.overlayOpacity = 0.85;
 
     // Every layer's coarsest tile first (the holes need the sharper layers' roots).
     for (const l of this.layers) {
@@ -254,15 +313,28 @@ export class WorldModule extends Module {
         terrain.ramp = this.ramp;                                 // same colours as the real ground
     this.terrain = terrain;
     terrain.recenter = (lon, lat) => this.recenter(lon, lat);
+    terrain.setOverlay = (name, opacity) => this.setOverlay(name, opacity);   // 'olivine' | 'pyroxene' | null
+    terrain.cycleOverlay = () => this.cycleOverlay();                         // off -> olivine -> pyroxene -> off
+    terrain.overlays = OVERLAYS;
+    terrain.overlayReport = (name) => this.overlayReport(name);   // console: print what a map is and where it shows
     this.updateTerrainFrame();
     terrain.sampleWorld = (x, z) => {                         // drawn height at a world x/z, or null if no data
       const s = this.sample(this.lonC + x / M, this.latC - z / M);
       return s ? (s.h - minE) * VERT_EXAG + s.order * LIFT : null;
     };
     this.ctx.bus.emit(EVENTS.TERRAIN_READY, terrain);
+    this.legend = new OverlayLegend(this);                    // layers icon + tick boxes (uses legendData / setLegendItem below)
 
     this.refine();
     this.timer = setInterval(() => this.refine(), 100);
+
+    this.onKey = (e) => {                                     // O = cycle the overlay (change or remove as you like)
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key === 'o' || e.key === 'O') this.cycleOverlay();
+    };
+    window.addEventListener('keydown', this.onKey);
   }
 
     updateTerrainFrame() {
@@ -276,6 +348,7 @@ export class WorldModule extends Module {
       z0: (this.latC - g.latMax) * M, z1: (this.latC - g.latMin) * M,
     };
     t.lonC = this.lonC;
+    t.lonMid = (f.lonMin + f.lonMax) / 2;   // fixed centre of the global map (does not move on recenter)
     t.latC = this.latC;
     t.worldToLonLat = (x, z) => ({ lon: this.lonC + x / M, lat: this.latC - z / M });
     t.lonLatToWorld = (lon, lat) => ({ x: (lon - this.lonC) * M, z: (this.latC - lat) * M });
@@ -287,6 +360,7 @@ export class WorldModule extends Module {
     const dx = (lon - this.lonC) * M, dz = (this.latC - lat) * M;
     this.lonC = lon;
     this.latC = lat;
+    this.ovU.uOvOrigin.value.set(lon, lat);
     for (const l of this.layers) {
       for (const t of l.tiles.values()) {
         t.box.min.set((t.lonA - lon) * M, this.yLo, (lat - t.latA) * M);
@@ -471,12 +545,13 @@ fillGaps(h, V, maxGap = 24, smooth = 6) {
       shader.uniforms.uWave = { value: d.wave };
       shader.uniforms.uStrength = { value: d.strength };
       shader.uniforms.uTint = { value: d.tint };
+      Object.assign(shader.uniforms, this.ovU);                     // shared overlay uniforms (same objects for every layer)
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', '#include <common>\nvarying vec3 vDPos;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDPos = transformed;');   // meshes sit at the origin, so this is world space
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', '#include <common>\n' + DETAIL_PARS)
-        .replace('#include <color_fragment>', '#include <color_fragment>\n' + DETAIL_COLOR)
+        .replace('#include <common>', '#include <common>\n' + DETAIL_PARS + OV_PARS)
+        .replace('#include <color_fragment>', '#include <color_fragment>\n' + DETAIL_COLOR + OV_COLOR)
         .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + DETAIL_NORMAL);
     };
     return (this.mats[order] = mat);
@@ -740,8 +815,173 @@ fillGaps(h, V, maxGap = 24, smooth = 6) {
     return out;
   }
 
+  // ---- optional data overlay ---------------------------------------------
+
+  // The small .json next to each map (bounds, colour table). Cached; the legend reads it without loading the image.
+  async overlayMeta(name) {
+    if (this.overlayMetas.has(name)) return this.overlayMetas.get(name);
+    const url = `${TILES}overlays/${name}.json`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}`);
+    const meta = await res.json();
+    this.overlayMetas.set(name, meta);
+    return meta;
+  }
+
+  async loadOverlay(name) {
+    if (this.overlays.has(name)) return this.overlays.get(name);
+    const base = `${TILES}overlays/${name}`;
+    const meta = await this.overlayMeta(name);
+    const tex = await new THREE.TextureLoader().loadAsync(base + '.png');
+    tex.minFilter = tex.magFilter = meta.categorical ? THREE.NearestFilter : THREE.LinearFilter;   // categorical: never blend unit numbers
+    tex.generateMipmaps = false;
+    tex.flipY = false;                                        // row 0 = north edge
+    tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    const lutData = new Uint8Array(256 * 4);
+    for (let i = 0; i < 256; i++) {
+      lutData[i * 4] = meta.lut[i * 3]; lutData[i * 4 + 1] = meta.lut[i * 3 + 1];
+      lutData[i * 4 + 2] = meta.lut[i * 3 + 2]; lutData[i * 4 + 3] = 255;
+    }
+    const lut = new THREE.DataTexture(lutData, 256, 1, THREE.RGBAFormat);
+    lut.minFilter = lut.magFilter = THREE.NearestFilter;
+    lut.generateMipmaps = false;
+    lut.needsUpdate = true;
+    const o = { name, meta, tex, lut, stats: this.pixelStats(tex.image) };
+    this.overlays.set(name, o);
+    return o;
+  }
+
+  // How many pixels of a map's image are non-zero (an empty image draws nothing). Skipped for huge images.
+  pixelStats(img) {
+    try {
+      const w = img.width, h = img.height;
+      if (!w || !h || w * h > 16e6) return null;
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const g = c.getContext('2d', { willReadFrequently: true });
+      g.drawImage(img, 0, 0);
+      const d = g.getImageData(0, 0, w, h).data;
+      let nz = 0, max = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i]) { nz++; if (d[i] > max) max = d[i]; }
+      return { w, h, nonZero: nz, share: nz / (w * h), max };
+    } catch { return null; }
+  }
+
+  // Prints what a map is and whether it can be seen. Also available from the browser console:
+  //   app.ctx.state.get('terrain').overlayReport('olivine')
+  async overlayReport(name = this.overlayName) {
+    if (!name) { console.info('[overlay] none selected'); return null; }
+    const o = await this.loadOverlay(name), m = o.meta, st = o.stats;
+    const hit = (f) => !!f && m.east >= f.lonMin && m.west <= f.lonMax && m.north >= f.latMin && m.south <= f.latMax;
+    const rep = {
+      name, image: st ? `${st.w}x${st.h}` : `${o.tex.image?.width}x${o.tex.image?.height}`,
+      box: { west: m.west, east: m.east, south: m.south, north: m.north },
+      centre: { lon: +((m.west + m.east) / 2).toFixed(3), lat: +((m.south + m.north) / 2).toFixed(3) },
+      alphaMax: m.alphaMax, categorical: !!m.categorical, opacity: this.overlayOpacity,
+      pixels: st ? { nonZero: st.nonZero, share: +st.share.toFixed(4), max: st.max } : 'not measured',
+      overlapsTerrain: hit(this.layers[0]?.fp), overlapsSharpLayer: hit(this.ref?.fp),
+    };
+    console.info(`[overlay] ${name}`, rep);
+    if (st && st.nonZero === 0) console.warn(`[overlay] ${name}: the image is EMPTY (every pixel is 0), so nothing can be drawn`);
+    if (!(m.alphaMax > 0)) console.warn(`[overlay] ${name}: alphaMax is ${m.alphaMax}, so it is invisible`);
+    if (!rep.overlapsTerrain) console.warn(`[overlay] ${name}: its box does not overlap the terrain at all (check west/east: -180..180 or 0..360?)`);
+    else console.info(`[overlay] ${name}: only drawn inside lon ${m.west}..${m.east}, lat ${m.south}..${m.north}; centre ${rep.centre.lat}N, ${rep.centre.lon}E`);
+    return rep;
+  }
+
+  async setOverlay(name, opacity = this.overlayOpacity) {
+    const u = this.ovU;
+    this.overlayOpacity = opacity;
+    if (!name) { u.uOvAmount.value = 0; this.overlayName = null; return null; }
+    const o = await this.loadOverlay(name);
+    if (!this.alive) return null;
+    const m = o.meta;
+    u.uOvTex.value = o.tex;
+    u.uOvLut.value = o.lut;
+    u.uOvBox.value.set(m.west, m.east, m.south, m.north);
+    u.uOvAlpha.value = m.alphaMax;
+    u.uOvCat.value = m.categorical ? 1 : 0;
+    u.uOvAmount.value = opacity;
+    this.overlayName = name;
+    this.overlayReport(name);
+    return name;
+  }
+
+  async cycleOverlay() {
+    const order = [null, ...OVERLAYS];
+    const next = order[(order.indexOf(this.overlayName) + 1) % order.length];
+    try { await this.setOverlay(next); console.log('[terrain] overlay:', next ?? 'off'); }
+    catch (e) { console.warn('[terrain] overlay failed:', e.message); }
+    this.legend?.refresh();
+  }
+
+  // ---- legend host (OverlayLegend calls these three) ------------------------
+
+  // CSS swatch for a map: its real colour ramp, or coloured stripes for a categorical map.
+  swatch(m) {
+    const rgb = (i) => `rgb(${m.lut[i * 3]},${m.lut[i * 3 + 1]},${m.lut[i * 3 + 2]})`;
+    if (m.categorical && m.legend?.length) {
+      const n = Math.min(6, m.legend.length), stops = [];
+      for (let k = 0; k < n; k++) {
+        const c = m.legend[Math.floor((k * m.legend.length) / n)].color;
+        stops.push(`${c} ${(k * 100) / n}% ${((k + 1) * 100) / n}%`);
+      }
+      return `linear-gradient(90deg, ${stops.join(', ')})`;
+    }
+    const idx = [0, 40, 80, 120, 160, 200, 255];
+    return `linear-gradient(90deg, ${idx.map(rgb).join(', ')})`;
+  }
+
+  // Unit list for a categorical map, grouped by geologic age.
+  legendEntries(m) {
+    return [...(m.legend || [])]
+      .sort((a, b) => PERIOD_ORDER.indexOf(a.period) - PERIOD_ORDER.indexOf(b.period))
+      .map((e) => ({ color: e.color, label: `${e.unit} \u00b7 ${e.name}`, group: PERIOD_LABEL[e.period] ?? e.period }));
+  }
+
+  async legendData() {
+    const items = [];
+    for (const name of OVERLAYS) {
+      try {
+        const m = await this.overlayMeta(name);
+        const info = OVERLAY_INFO[name] ?? {};
+        const whole = m.east - m.west >= 359 && m.north - m.south >= 170;
+        const f1 = (v) => +Number(v).toFixed(1);
+        items.push({
+          kind: 'raster', id: name, label: info.label ?? name, gradient: this.swatch(m), on: this.overlayName === name,
+          info: {
+            what: info.what,
+            coverage: whole ? 'Covers the whole planet.'
+              : `Local map: drawn only inside lon ${f1(m.west)} to ${f1(m.east)}\u00b0E, lat ${f1(m.south)} to ${f1(m.north)}\u00b0N. Nothing shows elsewhere.`,
+            gradient: m.categorical ? null : this.swatch(m),
+            scale: m.categorical ? null : (info.scale ?? ['less', 'more']),
+            entries: m.categorical ? this.legendEntries(m) : null,
+          },
+        });
+      } catch (e) { console.warn(`[legend] ${name}: left out (${e.message})`); }
+    }
+    return items.length ? [{ title: 'Map layers', note: 'One map is drawn at a time.', items }] : [];
+  }
+
+  async setLegendItem(kind, id, on) {
+    console.log(`[legend] ${on ? 'ON ' : 'OFF'} ${kind}:${id}`);
+    if (kind !== 'raster') return false;
+    try {
+      if (on) { await this.setOverlay(id); return this.overlayName === id; }
+      if (this.overlayName === id) await this.setOverlay(null);
+      return true;
+    } catch (e) { console.warn('[legend] could not switch', id, e.message); return false; }
+  }
+
+  setOverlayOpacity(v) {
+    this.overlayOpacity = v;
+    if (this.overlayName) this.ovU.uOvAmount.value = v;
+  }
+
   dispose() {
     super.dispose();
+    window.removeEventListener('keydown', this.onKey);
+    this.legend?.dispose();
+    this.overlays?.forEach((o) => { o.tex.dispose(); o.lut.dispose(); });
     this.alive = false;
     clearInterval(this.timer);
     if (!this.group) return;
