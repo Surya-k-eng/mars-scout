@@ -5,6 +5,8 @@ import { CharacterModule } from './modules/character/CharacterModule.js';
 import { AtmosphereModule } from './modules/atmosphere/AtmosphereModule.js';
 import { MapPickModule } from './modules/mappick/MapPickModule.js';
 import { TitleScreenModule } from './modules/ui/TitleScreen.js';
+import { MineralPickModule } from './modules/mappick/MineralPickModule.js';
+import { MineralSearchModule } from './modules/mappick/MineralSearchModule.js';
 
 
 
@@ -14,4 +16,6 @@ export default [
   AtmosphereModule,
   MapPickModule,
   TitleScreenModule,
+  MineralPickModule,
+  MineralSearchModule,
 ];

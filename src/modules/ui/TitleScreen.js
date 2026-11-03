@@ -543,8 +543,8 @@ const SOUND_HTML = `
 export class TitleScreenModule extends Module {
   static id = 'titleScreen';
   static requires = [];
-
   async init() {
+    console.log('[title] init start');
     this.active = true;
     this.started = false;
     this.page = 'title';
@@ -574,7 +574,10 @@ export class TitleScreenModule extends Module {
     }
 
     this.updateClock();
+    console.log('[title] init done, layer in page:', !!document.getElementById('mars-title-layer'));
   }
+
+
 
   /* ============================================================
      STYLES (copied from the standalone HTML page)
@@ -877,14 +880,14 @@ export class TitleScreenModule extends Module {
 
     const on = (id, fn) => layer.querySelector(id).addEventListener('click', fn);
 
-    on('#mars-start', () => this.goPage(2));
-    on('#mars-back', () => this.goPage(1));
-    on('#mars-coordinates', () => this.enterMarsScout());
-    on('#mars-settings', () => this.showSettings());
-    on('#mars-about', () => this.showAbout());
-    on('#mars-refs', () => this.showReferences());
-    on('#mars-coordinates', () => this.enterMarsScout('coordinates'));
-    on('#mars-landmarks',   () => this.enterMarsScout('landmarks'));
+      on('#mars-start', () => this.goPage(2));
+      on('#mars-back', () => this.goPage(1));
+      on('#mars-settings', () => this.showSettings());
+      on('#mars-about', () => this.showAbout());
+      on('#mars-refs', () => this.showReferences());
+      on('#mars-coordinates', () => this.enterMarsScout('coordinates'));
+      on('#mars-landmarks',   () => this.enterMarsScout('landmarks'));
+      on('#mars-targets',     () => this.enterMarsScout('targets'));
 
     this.overlay.addEventListener('click', (event) => {
       if (event.target === this.overlay) this.closeDialog();
@@ -1389,6 +1392,7 @@ export class TitleScreenModule extends Module {
      ============================================================ */
 
   disposeMarsScene() {
+    
     if (this.renderer) this.renderer.dispose();
     this.globe?.dispose();
     this.globe = null;

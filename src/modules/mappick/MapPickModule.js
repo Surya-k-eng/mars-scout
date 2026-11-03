@@ -9,8 +9,8 @@ import { Module } from '../../core/Module.js';
 //    distances, max slope and a legend.
 
 // ---- map picking ----------------------------------------------------------
-const MIN_HEIGHT = 300;         // closest zoom (camera height above ground, metres)
-const MAX_HEIGHT_FACTOR = 1.0;  // farthest zoom, as a multiple of the "whole region fits" height (was 0.5 = only the middle half)
+const MIN_HEIGHT = 400;         // closest zoom (camera height above ground, metres)
+const MAX_HEIGHT_FACTOR = 0.5;  // farthest zoom, as a multiple of the "whole region fits" height (was 0.5 = only the middle half)
 const ZOOM_SPEED = 1.4;         // zoom step per wheel notch (was 1.15)
 const PAN_SPEED = 1.6;          // drag-pan multiplier (was 1)
 const FLAT_ONLY = true;         // always a top-down 2D view (terrain still drawn in 3D); never restore the tilted 3D camera
@@ -1336,7 +1336,7 @@ export class MapPickModule extends Module {
     cam.position.x = w.x;
     cam.position.z = w.z;
     const tanH = Math.tan(THREE.MathUtils.degToRad(cam.fov ?? 50) / 2);
-    const want = f.circle && f.diameter ? (f.diameter * 1000) / (0.4 * tanH) : 8000;   // diameter km -> metres
+    const want = f.circle && f.diameter ? (f.diameter * 1000) / (0.25 * tanH) : 8000;   // diameter km -> metres
     const ground = this.terrain.sampleWorld(w.x, w.z) ?? 0;
     cam.position.y = THREE.MathUtils.clamp(want, MIN_HEIGHT, this.hMax);
     this.focusFeat = f;                                      // drawFeatures() rings it

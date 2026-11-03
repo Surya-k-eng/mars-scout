@@ -31,7 +31,8 @@ const ROUTE_STRAIGHTEN = 60;     // metres: Astro cuts across small bends of the
 const TURN_DEADZONE = 0.35;     // rad (~20 deg): while following the route the camera does NOT turn for bends smaller than this
 const ROUTE_TURN_RATE = 2;      // how quickly the camera swings round when it does turn (was 6; smaller = calmer)
 const BODY_LAYER = 1;
-const RING_M = 350;             // full-detail circle around Astro, metres, in every direction           // body is only drawn for the main camera, never in his own view
+const RING_M = 350;     
+const MAIN_CAM_FOG = false;   // false = main view has no fog, Astro's view keeps it        // full-detail circle around Astro, metres, in every direction           // body is only drawn for the main camera, never in his own view
 
 export class CharacterModule extends Module {
   static id = 'character';
@@ -121,11 +122,15 @@ export class CharacterModule extends Module {
     this.prevRender = r.render;
     const prev = this.prevRender.bind(r);
     this.wrapper = (scene, camera) => {
+      const fog = scene.fog, dens = fog?.density;
+      const isMain = camera === this.ctx.camera;
+      if (fog && isMain && !MAIN_CAM_FOG) fog.density = 0;   // main view: no fog
       prev(scene, camera);
-      if (this.busy || !this.alive || camera !== this.ctx.camera) return;
+      if (fog) fog.density = dens;                           // restore for Astro's view
+      if (this.busy || !this.alive || !isMain) return;
       this.busy = true;
       try {
-        camera.layers.enable(BODY_LAYER);   // the main camera also sees Astro's body
+        camera.layers.enable(BODY_LAYER);
         this.update();
         this.drawInset(prev, scene);
       } finally {

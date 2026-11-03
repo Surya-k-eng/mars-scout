@@ -19,7 +19,8 @@ const R2D = 180 / Math.PI;
 const SOL_DAYS = 1.0274912517;               // one Mars solar day, in Earth days
 const SOL_MS = SOL_DAYS * 86400000;
 const MARS_HOUR_MS = SOL_MS / 24;            // 1/24 of a sol
-const TT_MINUS_UTC_S = 69.184;                      // 37 leap seconds + 32.184 s
+const TT_MINUS_UTC_S = 69.184;     
+                 // 37 leap seconds + 32.184 s
 
 // Planetary perturbers: amplitude (deg), period (years), phase (deg)
 const PBS = [
@@ -421,8 +422,8 @@ export class AtmosphereModule extends Module {
     u.uGlow.value.copy(s.glow); u.uSun.value.copy(s.sun);
     u.uSunDir.value.copy(this.sunDir);
     u.uGlowStrength.value = s.glowStrength; u.uDust.value = s.dust;
+    if (scene.fog) { scene.fog.color.copy(s.fog); scene.fog.density = s.fogDensity * FOG_SCALE; }
 
-    if (scene.fog) { scene.fog.color.copy(s.fog); scene.fog.density = s.fogDensity * FOG_SCALE * (this.mapPickMode ? 0:1); }
 
     this.sunLight.color.copy(s.sunLight);
     this.sunLight.intensity = s.sunIntensity;

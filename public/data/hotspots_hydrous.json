@@ -1,0 +1,4509 @@
+[
+ {
+  "mineral": "hydrous",
+  "lon": 86.634,
+  "lat": 3.447,
+  "n_obs": 9,
+  "score": 9.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00009657",
+   "FRT00008CA3",
+   "MSW00005912"
+  ],
+  "rank": 1
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -179.549,
+  "lat": -28.61,
+  "n_obs": 8,
+  "score": 8.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000C441",
+   "FRT00011EBF",
+   "FRT0000880D"
+  ],
+  "rank": 2
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 74.43,
+  "lat": -27.54,
+  "n_obs": 8,
+  "score": 8.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0001C779",
+   "FRT000059DF",
+   "FRT00010463"
+  ],
+  "rank": 3
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -178.652,
+  "lat": -28.442,
+  "n_obs": 6,
+  "score": 6.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000092F7",
+   "FRT00009E4C",
+   "FRT00009BBC"
+  ],
+  "rank": 4
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -76.41,
+  "lat": -9.693,
+  "n_obs": 6,
+  "score": 6.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000AD3D",
+   "HRL000121B5",
+   "FRT00009B66"
+  ],
+  "rank": 5
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 84.663,
+  "lat": 3.452,
+  "n_obs": 6,
+  "score": 6.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00003B63",
+   "FRT00018800",
+   "FRT0001802B"
+  ],
+  "rank": 6
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -26.615,
+  "lat": 16.472,
+  "n_obs": 6,
+  "score": 6.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSP00003B77",
+   "MSP00003B77",
+   "MSP000044A1"
+  ],
+  "rank": 7
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 64.544,
+  "lat": -26.528,
+  "n_obs": 5,
+  "score": 5.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   "MSP00005CF6"
+  ],
+  "rank": 8
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 74.54,
+  "lat": -26.444,
+  "n_obs": 5,
+  "score": 5.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0000685E",
+   "",
+   ""
+  ],
+  "rank": 9
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 75.416,
+  "lat": -26.556,
+  "n_obs": 5,
+  "score": 5.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00020B44",
+   "HRL0001726F",
+   ""
+  ],
+  "rank": 10
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -70.894,
+  "lat": -12.816,
+  "n_obs": 5,
+  "score": 5.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSW000043F5",
+   "MSW000043F5",
+   ""
+  ],
+  "rank": 11
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 4.472,
+  "lat": 0.424,
+  "n_obs": 5,
+  "score": 5.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00009DEE",
+   "FRT000168AD",
+   "HRL0000B37A"
+  ],
+  "rank": 12
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -0.254,
+  "lat": 2.19,
+  "n_obs": 5,
+  "score": 5.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00004A01",
+   "FRT0000BAD3",
+   "FRT00004616"
+  ],
+  "rank": 13
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -20.392,
+  "lat": 25.246,
+  "n_obs": 5,
+  "score": 5.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT0000B3B6",
+   "FRT0000A425"
+  ],
+  "rank": 14
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 48.258,
+  "lat": -41.623,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000915D",
+   "FRT0000B187",
+   "FRT0000A158"
+  ],
+  "rank": 15
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -166.498,
+  "lat": -29.497,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000750A",
+   "FRT00005AA4",
+   "HRL00013FF5"
+  ],
+  "rank": 16
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -165.715,
+  "lat": -28.59,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00007D87",
+   "HRL000062B6",
+   "HRL00008565"
+  ],
+  "rank": 17
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 75.57,
+  "lat": -28.48,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL000118F5",
+   "",
+   ""
+  ],
+  "rank": 18
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 65.413,
+  "lat": -27.7,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000947F",
+   "FRT00007F93",
+   "FRT0001188F"
+  ],
+  "rank": 19
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 78.425,
+  "lat": -27.4,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000BFA1",
+   "HRL0000A193",
+   "FRT000091B1"
+  ],
+  "rank": 20
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 66.62,
+  "lat": -26.52,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL00011E95",
+   "HRL00018889",
+   ""
+  ],
+  "rank": 21
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 56.353,
+  "lat": -25.54,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00013759",
+   "FRT00019833",
+   "FT10000FB77"
+  ],
+  "rank": 22
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 56.515,
+  "lat": -24.37,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0000D0CB",
+   "",
+   "MSP000062D8"
+  ],
+  "rank": 23
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 42.517,
+  "lat": -20.285,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000098E8",
+   "HRL00007FE1",
+   "FRT00008F08"
+  ],
+  "rank": 24
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 88.63,
+  "lat": -19.305,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00014053",
+   ""
+  ],
+  "rank": 25
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 91.445,
+  "lat": -16.383,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   "FRT000137E2"
+  ],
+  "rank": 26
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 93.528,
+  "lat": -13.32,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00004A76",
+   "",
+   "FRT00019F3E"
+  ],
+  "rank": 27
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 56.41,
+  "lat": -11.283,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00008585",
+   "FRT00006533",
+   "FRT0000B5AF"
+  ],
+  "rank": 28
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 81.733,
+  "lat": -10.62,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00013754",
+   "",
+   "FRT00013421"
+  ],
+  "rank": 29
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 84.645,
+  "lat": -7.45,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000AB40",
+   "FRT000148C1",
+   ""
+  ],
+  "rank": 30
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -76.34,
+  "lat": -5.413,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSW00004932",
+   "",
+   ""
+  ],
+  "rank": 31
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 138.35,
+  "lat": -5.48,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000148B8",
+   "FRT000037DF",
+   ""
+  ],
+  "rank": 32
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 132.767,
+  "lat": -4.48,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000BA7B",
+   "MSP0000610B",
+   "MSP0000610B"
+  ],
+  "rank": 33
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -7.7,
+  "lat": -3.25,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000BD84",
+   "FRT00007B8B",
+   "FRT00007B8B"
+  ],
+  "rank": 34
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -5.455,
+  "lat": -2.57,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000334D",
+   "FRT0000BFAF",
+   "FRT0000C5F7"
+  ],
+  "rank": 35
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 87.72,
+  "lat": -0.565,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSW0000897E",
+   "MSW0000897E",
+   "MSW0000897E"
+  ],
+  "rank": 36
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 3.658,
+  "lat": 0.208,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL00005B20",
+   "FRT0000550C",
+   "HRL00014069"
+  ],
+  "rank": 37
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 0.412,
+  "lat": 1.45,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00003CE0",
+   "FRT0001252F",
+   "FRT0000C52C"
+  ],
+  "rank": 38
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 85.257,
+  "lat": 3.243,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRS000047D8",
+   "FRT0000A819",
+   "HRS000047D8"
+  ],
+  "rank": 39
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -26.445,
+  "lat": 15.427,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSP000044A1",
+   "HRL0001649A",
+   "MSW00008273"
+  ],
+  "rank": 40
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -22.383,
+  "lat": 21.668,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT0000C42E",
+   "FRT0000A27C"
+  ],
+  "rank": 41
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -18.375,
+  "lat": 22.527,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "MSW000035EC",
+   "HRS0000307A"
+  ],
+  "rank": 42
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -21.343,
+  "lat": 24.498,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT0000D4EC",
+   ""
+  ],
+  "rank": 43
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -18.767,
+  "lat": 24.532,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000C18E",
+   "FRT0000C596",
+   "FRT000117BB"
+  ],
+  "rank": 44
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -19.51,
+  "lat": 26.585,
+  "n_obs": 4,
+  "score": 4.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSP00005994",
+   "",
+   ""
+  ],
+  "rank": 45
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 48.227,
+  "lat": -43.313,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL00013366",
+   "",
+   ""
+  ],
+  "rank": 46
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -154.443,
+  "lat": -33.277,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000BB36",
+   "FRT0000C9F7",
+   "FRT0000C9F7"
+  ],
+  "rank": 47
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 84.383,
+  "lat": -33.223,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00018780",
+   "HRS0000B6FE",
+   "FRT0001642D"
+  ],
+  "rank": 48
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -154.493,
+  "lat": -32.507,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL00012FE5",
+   "FRT00007431",
+   "FRT00011D8A"
+  ],
+  "rank": 49
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 73.323,
+  "lat": -29.327,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00016374",
+   ""
+  ],
+  "rank": 50
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -50.52,
+  "lat": -28.383,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00007C34",
+   "FRT0000B5C3",
+   "FRT0000AB54"
+  ],
+  "rank": 51
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 57.747,
+  "lat": -27.28,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0001BBB5",
+   "FRT0001BBB5",
+   "HRS0001118A"
+  ],
+  "rank": 52
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 60.477,
+  "lat": -27.397,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00014241",
+   "FRT00007F4A",
+   "HRL0001B918"
+  ],
+  "rank": 53
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 73.73,
+  "lat": -27.223,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00009311",
+   "FRT00009A8D",
+   "HRL0001979E"
+  ],
+  "rank": 54
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 83.867,
+  "lat": -27.543,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00019C7E",
+   "FRT00016F2B",
+   "FRT00019831"
+  ],
+  "rank": 55
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -160.63,
+  "lat": -26.333,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0001735E",
+   "FRT000106E4",
+   "HRL000132BC"
+  ],
+  "rank": 56
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -34.663,
+  "lat": -26.767,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000C1D1",
+   "FRT00009172",
+   "FRT0000474A"
+  ],
+  "rank": 57
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 73.367,
+  "lat": -26.727,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "HRL000136F1",
+   "HRL00013FA7"
+  ],
+  "rank": 58
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 63.883,
+  "lat": -25.827,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0001258C",
+   "FRT0000CC60",
+   "FRT0001B6D9"
+  ],
+  "rank": 59
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 66.41,
+  "lat": -25.547,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0001B941",
+   "FRT0000CB3A",
+   "FRT000092B4"
+  ],
+  "rank": 60
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 61.437,
+  "lat": -24.453,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0001689A",
+   "",
+   ""
+  ],
+  "rank": 61
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 74.407,
+  "lat": -24.703,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   "FRT00024832"
+  ],
+  "rank": 62
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 70.537,
+  "lat": -23.333,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000195D2",
+   "",
+   ""
+  ],
+  "rank": 63
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 70.443,
+  "lat": -22.177,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   ""
+  ],
+  "rank": 64
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 83.687,
+  "lat": -13.117,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00013F08",
+   "FRT000080AD"
+  ],
+  "rank": 65
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 89.51,
+  "lat": -13.377,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00013F44",
+   "",
+   ""
+  ],
+  "rank": 66
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -69.547,
+  "lat": -12.63,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   ""
+  ],
+  "rank": 67
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 78.43,
+  "lat": -12.19,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   "FRT00017CDB"
+  ],
+  "rank": 68
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 83.403,
+  "lat": -12.65,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00013665",
+   "FRT000073C1",
+   "FRT00006F45"
+  ],
+  "rank": 69
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 79.697,
+  "lat": -9.297,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   ""
+  ],
+  "rank": 70
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 132.533,
+  "lat": -5.473,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000B001",
+   "FRT0000A332",
+   "FRT00014869"
+  ],
+  "rank": 71
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 136.583,
+  "lat": -5.58,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL00001F46",
+   "FRT0001FB61",
+   "HRL00009D8A"
+  ],
+  "rank": 72
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 70.607,
+  "lat": -2.477,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   ""
+  ],
+  "rank": 73
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -18.667,
+  "lat": -1.3,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   ""
+  ],
+  "rank": 74
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 3.333,
+  "lat": -1.437,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000984F",
+   "FRT00017562",
+   "HRL0000BC94"
+  ],
+  "rank": 75
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 7.623,
+  "lat": 0.477,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL00011403",
+   "HRS0000B982",
+   "HRL000082B3"
+  ],
+  "rank": 76
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 83.48,
+  "lat": 0.4,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00006166",
+   "FRT0000BDD9",
+   "FRT00010611"
+  ],
+  "rank": 77
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -2.42,
+  "lat": 1.713,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0000822E",
+   "FRT0000A50D",
+   "FRT000097F8"
+  ],
+  "rank": 78
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 2.797,
+  "lat": 1.543,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRS00006A75",
+   "FRT00006445",
+   "HRS0000C004"
+  ],
+  "rank": 79
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 87.497,
+  "lat": 1.657,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSW0000897E",
+   "MSW0000897E",
+   "MSW0000897E"
+  ],
+  "rank": 80
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 82.62,
+  "lat": 3.63,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000A377",
+   "",
+   ""
+  ],
+  "rank": 81
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -1.9,
+  "lat": 5.623,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00009217",
+   "FRT00003E24",
+   "FRT00003E24"
+  ],
+  "rank": 82
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -27.287,
+  "lat": 16.507,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   "MSP00003B77"
+  ],
+  "rank": 83
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -23.31,
+  "lat": 16.64,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0000A3DE",
+   "",
+   "FRT00008438"
+  ],
+  "rank": 84
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -24.377,
+  "lat": 18.24,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT0000810D",
+   "FRT00004686"
+  ],
+  "rank": 85
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -54.45,
+  "lat": 19.48,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   "FRT0001957D"
+  ],
+  "rank": 86
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 63.04,
+  "lat": 20.697,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00007CBB",
+   "FRT00009CD8",
+   "FRT00009CD8"
+  ],
+  "rank": 87
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -55.467,
+  "lat": 21.623,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   ""
+  ],
+  "rank": 88
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -19.4,
+  "lat": 23.717,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0001903B",
+   "FRT0000BB59",
+   "FRT0000B141"
+  ],
+  "rank": 89
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -18.73,
+  "lat": 23.277,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00009326",
+   "FRT00016E2D",
+   ""
+  ],
+  "rank": 90
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 28.35,
+  "lat": 51.483,
+  "n_obs": 3,
+  "score": 3.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "",
+   "FRT0001B945"
+  ],
+  "rank": 91
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -58.63,
+  "lat": -39.405,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000AAE1",
+   "HRL00011908"
+  ],
+  "rank": 92
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -138.915,
+  "lat": -38.85,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00010A4E",
+   "HRL0000D1C7"
+  ],
+  "rank": 93
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -59.445,
+  "lat": -38.865,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00008F86",
+   "FRT00012470"
+  ],
+  "rank": 94
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -175.465,
+  "lat": -37.445,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00009A7B",
+   "FRT0000951C"
+  ],
+  "rank": 95
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -169.64,
+  "lat": -37.17,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000A9A8",
+   "FRT00009AAE"
+  ],
+  "rank": 96
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -165.755,
+  "lat": -37.335,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00016412",
+   "FRT000091EB"
+  ],
+  "rank": 97
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 173.29,
+  "lat": -35.3,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00008C90",
+   "FRT00011D69"
+  ],
+  "rank": 98
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 66.465,
+  "lat": -34.655,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000087D0",
+   "HRS0000A854"
+  ],
+  "rank": 99
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -143.64,
+  "lat": -33.325,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00009AAA",
+   "FRT000081B1"
+  ],
+  "rank": 100
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 82.8,
+  "lat": -32.8,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 101
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -178.095,
+  "lat": -31.09,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "HRL0001FC11"
+  ],
+  "rank": 102
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 74.375,
+  "lat": -31.12,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSP0000472E",
+   "MSP0000472E"
+  ],
+  "rank": 103
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 178.33,
+  "lat": -31.11,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00011D8F",
+   "FRT000090D8"
+  ],
+  "rank": 104
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -165.55,
+  "lat": -29.3,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000ABF2",
+   "HRL00016CFE"
+  ],
+  "rank": 105
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -64.11,
+  "lat": -29.36,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00013C9C"
+  ],
+  "rank": 106
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -47.175,
+  "lat": -29.725,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000AA4A",
+   "FRT0000AA4A"
+  ],
+  "rank": 107
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 61.98,
+  "lat": -29.04,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00013489",
+   "FRT0001379B"
+  ],
+  "rank": 108
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 66.76,
+  "lat": -29.3,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0001D9D5",
+   "FRT000180AE"
+  ],
+  "rank": 109
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 74.505,
+  "lat": -29.525,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00014A39"
+  ],
+  "rank": 110
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 82.805,
+  "lat": -29.69,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "HRL0001E378"
+  ],
+  "rank": 111
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -39.45,
+  "lat": -28.355,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0001BC82",
+   "FRT000183CD"
+  ],
+  "rank": 112
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 46.655,
+  "lat": -28.675,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0000A46A",
+   "FRT00012658"
+  ],
+  "rank": 113
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 56.7,
+  "lat": -28.35,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000920A",
+   "FRT0001D977"
+  ],
+  "rank": 114
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 62.945,
+  "lat": -28.525,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00018C87",
+   "FRT00018C87"
+  ],
+  "rank": 115
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 79.46,
+  "lat": -28.47,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00007D60",
+   ""
+  ],
+  "rank": 116
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -168.75,
+  "lat": -27.235,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000176BD",
+   "FRT000179BD"
+  ],
+  "rank": 117
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 59.59,
+  "lat": -27.37,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000148C7",
+   "FRT00009422"
+  ],
+  "rank": 118
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 64.43,
+  "lat": -27.375,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000139DB",
+   "MSP00005CF6"
+  ],
+  "rank": 119
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 66.45,
+  "lat": -27.49,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL000113F4",
+   "HRL0000D137"
+  ],
+  "rank": 120
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 77.8,
+  "lat": -27.535,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00009785"
+  ],
+  "rank": 121
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 37.81,
+  "lat": -26.59,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000A270",
+   "FRT0000C423"
+  ],
+  "rank": 122
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 56.415,
+  "lat": -26.155,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00019C80",
+   "FRT0001214D"
+  ],
+  "rank": 123
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 69.78,
+  "lat": -26.615,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 124
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 76.21,
+  "lat": -26.405,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0002333B",
+   "FRT0001C639"
+  ],
+  "rank": 125
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 79.34,
+  "lat": -26.9,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 126
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 37.685,
+  "lat": -25.21,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRS000123AF",
+   "HRL000051AB"
+  ],
+  "rank": 127
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 47.53,
+  "lat": -25.68,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00018EEA",
+   "FRT00016C45"
+  ],
+  "rank": 128
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 50.2,
+  "lat": -25.28,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000C37B",
+   "FRT00008D9E"
+  ],
+  "rank": 129
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 54.57,
+  "lat": -25.695,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0002372B",
+   ""
+  ],
+  "rank": 130
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 59.135,
+  "lat": -25.02,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000C7A1",
+   "FRT0001CA9D"
+  ],
+  "rank": 131
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 71.36,
+  "lat": -25.945,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00018125"
+  ],
+  "rank": 132
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 77.29,
+  "lat": -25.485,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00024655",
+   "FRT000117F3"
+  ],
+  "rank": 133
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -169.29,
+  "lat": -24.985,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00009C1F",
+   "HRL00009C1F"
+  ],
+  "rank": 134
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 43.295,
+  "lat": -24.245,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000C457",
+   "FRT00009BCF"
+  ],
+  "rank": 135
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 80.745,
+  "lat": -24.315,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00008FC0",
+   "HRL00008388"
+  ],
+  "rank": 136
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 101.375,
+  "lat": -24.415,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00008A2F",
+   "HRL00011A06"
+  ],
+  "rank": 137
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -33.4,
+  "lat": -23.775,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00009C06",
+   "FRT00008038"
+  ],
+  "rank": 138
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 5.5,
+  "lat": -23.6,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0000B236",
+   "HRL000078AE"
+  ],
+  "rank": 139
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 8.62,
+  "lat": -23.14,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00017396",
+   "FRT00018333"
+  ],
+  "rank": 140
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 9.31,
+  "lat": -23.66,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000CFE6",
+   "FRT00016DB1"
+  ],
+  "rank": 141
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -60.98,
+  "lat": -22.21,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRS0000A8D3",
+   "HRS0000A8D3"
+  ],
+  "rank": 142
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 36.555,
+  "lat": -22.57,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0001832B",
+   "FRT00016B60"
+  ],
+  "rank": 143
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 73.505,
+  "lat": -22.755,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 144
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 173.06,
+  "lat": -22.73,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT0000770E"
+  ],
+  "rank": 145
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -50.935,
+  "lat": -21.185,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00016676"
+  ],
+  "rank": 146
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 66.65,
+  "lat": -21.815,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL00013C12",
+   "FRT00003A2B"
+  ],
+  "rank": 147
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 69.85,
+  "lat": -21.375,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00013E36",
+   "FRT000118C8"
+  ],
+  "rank": 148
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 73.515,
+  "lat": -21.5,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00012651",
+   ""
+  ],
+  "rank": 149
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -53.305,
+  "lat": -20.55,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000070C1",
+   "FRT0000BC3E"
+  ],
+  "rank": 150
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -51.0,
+  "lat": -20.5,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 151
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 40.47,
+  "lat": -20.365,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00009100",
+   "HRL00009A52"
+  ],
+  "rank": 152
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 57.445,
+  "lat": -20.29,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 153
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 64.435,
+  "lat": -20.91,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL00011C89",
+   "FRT0002478B"
+  ],
+  "rank": 154
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -51.0,
+  "lat": -19.45,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 155
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 40.715,
+  "lat": -19.345,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL000042D9",
+   "HRL000089E6"
+  ],
+  "rank": 156
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 78.45,
+  "lat": -19.71,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 157
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -48.44,
+  "lat": -18.335,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00011728",
+   ""
+  ],
+  "rank": 158
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -50.75,
+  "lat": -17.11,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL000067F1",
+   "FRT0000D23E"
+  ],
+  "rank": 159
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 55.565,
+  "lat": -17.45,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL00017FB2",
+   ""
+  ],
+  "rank": 160
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -57.95,
+  "lat": -16.3,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 161
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 62.97,
+  "lat": -16.605,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0000B5F9",
+   ""
+  ],
+  "rank": 162
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 79.7,
+  "lat": -16.45,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT0000527C"
+  ],
+  "rank": 163
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 84.655,
+  "lat": -15.675,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00016D21"
+  ],
+  "rank": 164
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 91.24,
+  "lat": -14.935,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 165
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -48.53,
+  "lat": -13.215,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0000DD70",
+   ""
+  ],
+  "rank": 166
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -45.325,
+  "lat": -13.37,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 167
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 82.51,
+  "lat": -13.225,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 168
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 90.825,
+  "lat": -13.535,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 169
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 92.095,
+  "lat": -13.33,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00018CD2",
+   ""
+  ],
+  "rank": 170
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 105.405,
+  "lat": -13.425,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000049BB",
+   "FRT0000C907"
+  ],
+  "rank": 171
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -64.86,
+  "lat": -12.945,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000A16E",
+   ""
+  ],
+  "rank": 172
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 79.765,
+  "lat": -12.425,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 173
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 80.52,
+  "lat": -12.515,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 174
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 84.07,
+  "lat": -12.415,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT0000902A"
+  ],
+  "rank": 175
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 97.05,
+  "lat": -12.85,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00007612",
+   "FRT0001811B"
+  ],
+  "rank": 176
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -34.755,
+  "lat": -11.86,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSW00008897",
+   ""
+  ],
+  "rank": 177
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 81.88,
+  "lat": -11.78,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00017FA5"
+  ],
+  "rank": 178
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 89.595,
+  "lat": -11.185,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT0001C701"
+  ],
+  "rank": 179
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 92.325,
+  "lat": -11.235,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT000179EA"
+  ],
+  "rank": 180
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 96.5,
+  "lat": -11.7,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000CB68",
+   "HRS0000C6D3"
+  ],
+  "rank": 181
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -74.955,
+  "lat": -10.61,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 182
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -73.86,
+  "lat": -10.085,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 183
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -22.265,
+  "lat": -10.255,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00018051",
+   "FRT0001406E"
+  ],
+  "rank": 184
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 79.735,
+  "lat": -10.225,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 185
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 87.3,
+  "lat": -10.3,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000AD21",
+   "HRL00013BA7"
+  ],
+  "rank": 186
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 129.31,
+  "lat": -10.045,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000063D8",
+   "FRT00009358"
+  ],
+  "rank": 187
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -91.695,
+  "lat": -9.78,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00013FBE",
+   "FRT0000110F"
+  ],
+  "rank": 188
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -53.27,
+  "lat": -9.685,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL000080CB",
+   ""
+  ],
+  "rank": 189
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 82.63,
+  "lat": -9.715,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 190
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 129.245,
+  "lat": -9.935,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000CBA2",
+   "FRT000063D8"
+  ],
+  "rank": 191
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 74.745,
+  "lat": -8.25,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 192
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 91.5,
+  "lat": -8.725,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL000075C8",
+   "HRL00016FDF"
+  ],
+  "rank": 193
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -48.46,
+  "lat": -7.47,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000A3E3",
+   "FRT000125AD"
+  ],
+  "rank": 194
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 75.605,
+  "lat": -7.365,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 195
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 81.74,
+  "lat": -7.525,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00007D9D",
+   ""
+  ],
+  "rank": 196
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 93.785,
+  "lat": -7.315,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0000D01B",
+   "FRT0000CC93"
+  ],
+  "rank": 197
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -69.435,
+  "lat": -6.275,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00009901"
+  ],
+  "rank": 198
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 76.33,
+  "lat": -6.425,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "HRL00016ED5"
+  ],
+  "rank": 199
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 78.755,
+  "lat": -6.14,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 200
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 81.39,
+  "lat": -6.38,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00011E1B",
+   "FRT0000437A"
+  ],
+  "rank": 201
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 93.725,
+  "lat": -6.425,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000177F9",
+   "FRT000094DA"
+  ],
+  "rank": 202
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 102.56,
+  "lat": -6.14,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00004B38",
+   "MSW0000977D"
+  ],
+  "rank": 203
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -74.465,
+  "lat": -5.14,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 204
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -36.225,
+  "lat": -5.18,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSW0000993E",
+   "MSW0000993E"
+  ],
+  "rank": 205
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -21.65,
+  "lat": -5.45,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00019B9B"
+  ],
+  "rank": 206
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -20.6,
+  "lat": -5.45,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00019704",
+   "FRT00019E19"
+  ],
+  "rank": 207
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 76.33,
+  "lat": -5.855,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 208
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 78.5,
+  "lat": -5.85,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "HRL000067B5"
+  ],
+  "rank": 209
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 102.665,
+  "lat": -5.745,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSW0000977D",
+   "MSW0000977D"
+  ],
+  "rank": 210
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 110.48,
+  "lat": -5.72,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSW00008923",
+   "MSW00008923"
+  ],
+  "rank": 211
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -74.585,
+  "lat": -4.91,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL00008443",
+   "FRT0001298D"
+  ],
+  "rank": 212
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -71.39,
+  "lat": -4.39,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 213
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -62.285,
+  "lat": -4.33,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "MSW00003AEE"
+  ],
+  "rank": 214
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 62.705,
+  "lat": -4.76,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 215
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 68.41,
+  "lat": -4.805,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0000A2B2",
+   "FRT00018126"
+  ],
+  "rank": 216
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 102.485,
+  "lat": -4.65,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSW0000977D",
+   "MSW0000977D"
+  ],
+  "rank": 217
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 137.5,
+  "lat": -4.55,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000095EE",
+   ""
+  ],
+  "rank": 218
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -26.505,
+  "lat": -3.93,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000A38B",
+   "FRT00008943"
+  ],
+  "rank": 219
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -9.395,
+  "lat": -3.37,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000C8CD",
+   "FRT0000B1BD"
+  ],
+  "rank": 220
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -17.675,
+  "lat": -2.27,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT00008158"
+  ],
+  "rank": 221
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -5.0,
+  "lat": -2.26,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00011C15",
+   "FRT0001C3D1"
+  ],
+  "rank": 222
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 115.455,
+  "lat": -2.92,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL000233F9",
+   "MSW0000429C"
+  ],
+  "rank": 223
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -75.32,
+  "lat": -1.24,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0000D632",
+   ""
+  ],
+  "rank": 224
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 87.155,
+  "lat": -1.595,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000185A9",
+   "FRT00018FF2"
+  ],
+  "rank": 225
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 94.65,
+  "lat": -1.84,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000C859",
+   "FRT00016BC2"
+  ],
+  "rank": 226
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -3.9,
+  "lat": -0.95,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000088E6",
+   "FRT0001660F"
+  ],
+  "rank": 227
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 14.36,
+  "lat": -0.415,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000A160",
+   "HRS00003EC8"
+  ],
+  "rank": 228
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -3.67,
+  "lat": 0.35,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000093D3",
+   "HRL00009C41"
+  ],
+  "rank": 229
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -2.545,
+  "lat": 0.06,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00017117",
+   "HRS0000513B"
+  ],
+  "rank": 230
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -0.525,
+  "lat": 0.265,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00004FE8",
+   "FRT0000A0AC"
+  ],
+  "rank": 231
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 2.545,
+  "lat": 0.085,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00010107",
+   "FRT00010107"
+  ],
+  "rank": 232
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 87.6,
+  "lat": 0.72,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSW0000897E",
+   "MSW0000897E"
+  ],
+  "rank": 233
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -1.7,
+  "lat": 1.215,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000080C0",
+   "FRT000080C0"
+  ],
+  "rank": 234
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 1.18,
+  "lat": 1.425,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRS0000C10B",
+   "HRS00018E2C"
+  ],
+  "rank": 235
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 3.31,
+  "lat": 1.72,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00012FC3",
+   "FRT0000CB0F"
+  ],
+  "rank": 236
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -11.08,
+  "lat": 2.815,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSP00004F26",
+   "MSP00004F26"
+  ],
+  "rank": 237
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -7.95,
+  "lat": 2.165,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000C384",
+   "FRT0000C384"
+  ],
+  "rank": 238
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 3.51,
+  "lat": 2.36,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00018047",
+   "HRL0000AC53"
+  ],
+  "rank": 239
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 5.53,
+  "lat": 2.34,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00017DD0",
+   "HRS000042AB"
+  ],
+  "rank": 240
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 82.36,
+  "lat": 2.44,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000BAC3",
+   "MSP000052D3"
+  ],
+  "rank": 241
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 122.405,
+  "lat": 2.21,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000CB64",
+   "HRL000134F5"
+  ],
+  "rank": 242
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 11.67,
+  "lat": 6.2,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL000183B8",
+   ""
+  ],
+  "rank": 243
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 81.475,
+  "lat": 6.16,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 244
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -49.565,
+  "lat": 8.68,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL000090B6",
+   "HRL0000AB77"
+  ],
+  "rank": 245
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -46.765,
+  "lat": 11.72,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00024155",
+   "FRT00024155"
+  ],
+  "rank": 246
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 70.29,
+  "lat": 12.595,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "Syrtis Major",
+  "ids": [
+   "FRT00009D02",
+   "FRT0002333E"
+  ],
+  "rank": 247
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -16.63,
+  "lat": 15.525,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSP00004517",
+   "MSP00004517"
+  ],
+  "rank": 248
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 72.48,
+  "lat": 15.26,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "Syrtis Major",
+  "ids": [
+   "FRT000050F2",
+   "HRL00013CE1"
+  ],
+  "rank": 249
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -22.52,
+  "lat": 16.475,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "HSP000171CE"
+  ],
+  "rank": 250
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 76.25,
+  "lat": 17.1,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "Nili Fossae",
+  "ids": [
+   "",
+   "FRT0000BDA8"
+  ],
+  "rank": 251
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 77.115,
+  "lat": 17.57,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "Nili Fossae",
+  "ids": [
+   "HRL0000B8C2",
+   "FRT000165F7"
+  ],
+  "rank": 252
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -54.405,
+  "lat": 18.65,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 253
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 71.795,
+  "lat": 18.475,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000AE09",
+   "FRT00017ABA"
+  ],
+  "rank": 254
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -17.31,
+  "lat": 19.71,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSP0001AAE6",
+   "MSP0001AAE6"
+  ],
+  "rank": 255
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 60.605,
+  "lat": 19.58,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000D4D9",
+   "HRL00004810"
+  ],
+  "rank": 256
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 62.57,
+  "lat": 19.595,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL0000BF4D",
+   "FRT000090F8"
+  ],
+  "rank": 257
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 65.765,
+  "lat": 19.945,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000051EE",
+   "HRL0000AC95"
+  ],
+  "rank": 258
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 80.065,
+  "lat": 19.715,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "Nili Fossae",
+  "ids": [
+   "FRT00016655",
+   "FRT00016655"
+  ],
+  "rank": 259
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -54.71,
+  "lat": 20.41,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   ""
+  ],
+  "rank": 260
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -18.72,
+  "lat": 20.2,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSP000061E8",
+   "MSP00005399"
+  ],
+  "rank": 261
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -17.4,
+  "lat": 20.255,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSP0001AAE6",
+   "FRT00008838"
+  ],
+  "rank": 262
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -8.295,
+  "lat": 21.62,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "HRL00013FDE",
+   "MSW000028A2"
+  ],
+  "rank": 263
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 78.55,
+  "lat": 21.78,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "Nili Fossae",
+  "ids": [
+   "FRT00003584",
+   "FRT0000C968"
+  ],
+  "rank": 264
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -24.66,
+  "lat": 22.725,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00013F53",
+   "FRT000090AF"
+  ],
+  "rank": 265
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -20.47,
+  "lat": 22.325,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "",
+   "FRT0001BC7F"
+  ],
+  "rank": 266
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -17.22,
+  "lat": 22.385,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000C467",
+   "FRT0001654F"
+  ],
+  "rank": 267
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 61.295,
+  "lat": 22.25,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000096BF",
+   "FRT0000AD6E"
+  ],
+  "rank": 268
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 65.73,
+  "lat": 22.52,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00021BBA",
+   "HRL00010A06"
+  ],
+  "rank": 269
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -23.96,
+  "lat": 23.375,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "MSP0000773A",
+   "FRT00009CAE"
+  ],
+  "rank": 270
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -18.59,
+  "lat": 25.615,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT000119DC",
+   "FRT000129CF"
+  ],
+  "rank": 271
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 62.9,
+  "lat": 26.5,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00008474",
+   "FRT00008474"
+  ],
+  "rank": 272
+ },
+ {
+  "mineral": "hydrous",
+  "lon": -14.575,
+  "lat": 31.655,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT00009555",
+   "FRT00009555"
+  ],
+  "rank": 273
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 2.015,
+  "lat": 38.485,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000948E",
+   "FRT000164EC"
+  ],
+  "rank": 274
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 39.83,
+  "lat": 52.375,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0001B619",
+   "FRT0000BFA6"
+  ],
+  "rank": 275
+ },
+ {
+  "mineral": "hydrous",
+  "lon": 58.76,
+  "lat": 57.68,
+  "n_obs": 2,
+  "score": 2.0,
+  "area_km2": 0,
+  "peak": null,
+  "mean": null,
+  "region": "",
+  "ids": [
+   "FRT0000A2B4",
+   "FRT0000BE52"
+  ],
+  "rank": 276
+ }
+]
