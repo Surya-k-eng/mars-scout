@@ -36,6 +36,7 @@ const MAIN_CAM_FOG = false;   // false = main view has no fog, Astro's view keep
 
 export class CharacterModule extends Module {
   static id = 'character';
+  static requires = ['ui'];
 
   async init() {
     this.alive = true;
@@ -57,44 +58,10 @@ export class CharacterModule extends Module {
     this.group = this.buildBody();
     this.ctx.scene.add(this.group);
 
-    // second-screen frame (DOM overlay)
-    this.frame = document.createElement('div');
-    this.frame.style.cssText =
-      'position:fixed;pointer-events:none;box-sizing:border-box;border:2px solid #fff;' +
-      'box-shadow:0 0 14px rgba(0,0,0,.6);z-index:10;font:600 11px/1 system-ui,sans-serif;color:#fff;';
-    this.label = document.createElement('div');
-    this.label.style.cssText = 'position:absolute;left:6px;bottom:6px;text-shadow:0 0 4px #000;';
-    this.frame.appendChild(this.label);
-    document.body.appendChild(this.frame);
-    // coordinates readout (toggle with the V key)
-    this.coords = document.createElement('pre');
-    this.coords.style.cssText =
-      'position:fixed;pointer-events:none;z-index:10;margin:0;padding:8px;display:none;' +
-      'font:12px monospace;color:#9f9;background:rgba(0,0,0,.75);border:1px solid #444;border-radius:4px;';
-    document.body.appendChild(this.coords);
-
-    // speed buttons under the Astro cam:  [ - ]  Speed x1  [ + ]
+    // all DOM is created in buildUI() below; the logic only writes to this.label / this.speedTxt / this.coords
     this.speedIdx = SPEED_STEPS.indexOf(1);
     this.speedMul = 1;
-    this.speedBar = document.createElement('div');
-    this.speedBar.style.cssText =
-      'position:fixed;z-index:1001;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:4px 6px;' +
-      'background:rgba(0,0,0,.75);border:1px solid #444;border-radius:4px;font:600 12px system-ui,sans-serif;color:#fff;user-select:none;';
-    const mk = (txt, title, fn) => {
-      const b = document.createElement('button');
-      b.textContent = txt; b.title = title;
-      b.style.cssText = 'width:28px;height:24px;border-radius:4px;border:1px solid rgba(255,255,255,.35);background:#2d6cdf;color:#fff;font:700 15px/1 system-ui,sans-serif;cursor:pointer;padding:0;';
-      b.addEventListener('click', (e) => { fn(); b.blur(); e.stopPropagation(); });
-      b.addEventListener('pointerdown', (e) => e.stopPropagation());
-      return b;
-    };
-    this.speedTxt = document.createElement('span');
-    this.speedTxt.style.cssText = 'flex:1;text-align:center;cursor:pointer;white-space:nowrap;';
-    this.speedTxt.title = 'click = back to normal speed';
-    this.speedTxt.addEventListener('click', () => this.setSpeed(SPEED_STEPS.indexOf(1)));
-    this.speedBar.append(mk('\u2212', 'Slower', () => this.setSpeed(this.speedIdx - 1)), this.speedTxt, mk('+', 'Faster', () => this.setSpeed(this.speedIdx + 1)));
-    document.body.appendChild(this.speedBar);
-    this.setSpeed(this.speedIdx);
+    this.buildUI();
 
     // keyboard
     this.onKey = (e) => {
@@ -379,17 +346,58 @@ export class CharacterModule extends Module {
     s.width = `${w}px`;
     s.height = `${h}px`;
     this.updateCoords();
-    const c = this.coords.style;
-    c.left = `${rect.right - w - MARGIN}px`;   // sits just under the Astro cam
-    const sb = this.speedBar.style;                       // speed buttons sit right under the Astro cam
-    sb.left = `${rect.right - w - MARGIN}px`;
-    sb.top = `${rect.top + MARGIN + h + 6}px`;
-    sb.width = `${w - 18}px`;
-    c.top = `${rect.top + MARGIN + h + 6 + 36}px`;        // coordinates readout moves down below the buttons
-    c.width = `${w - 18}px`;
+    this.ctx.ui?.reserve?.('right', 'astroCam', rect.top + MARGIN + h + 6);   // right dock starts below the Astro cam
     this.label.textContent = !this.enabled ? 'ASTRO CAM  paused (C = on)'
       : this.following ? `ASTRO CAM  on route ${Math.round((this.routeS / this.route.total) * 100)}%  (P = ${this.paused ? 'resume' : 'pause'}, WASD = manual)`
       : this.route ? 'ASTRO CAM  (F = walk route again, C = off)' : 'ASTRO CAM  (C = off)';
+  }
+
+  // ---- UI WIRING: the only place this module creates DOM -----------------------------------------------------
+  // Layout, styling and event isolation come from UIModule. Change behaviour anywhere else freely; just keep
+  // writing to this.label (caption on the Astro cam), this.speedTxt (speed text) and this.coords (V-key readout).
+  buildUI() {
+    const ui = this.ctx.ui;
+    // caption frame drawn over the Astro cam viewport (the 3D picture itself is rendered by the wrapper in init)
+    const vf = ui.viewFrame?.() ?? (() => {          // UIModule's frame if it has one, else the same white frame built here
+      const f = document.createElement('div');
+      f.style.cssText = 'position:fixed;pointer-events:none;box-sizing:border-box;border:2px solid #fff;' +
+        'box-shadow:0 0 14px rgba(0,0,0,.6);z-index:10;font:600 11px/1 system-ui,sans-serif;color:#fff';
+      const l = document.createElement('div');
+      l.style.cssText = 'position:absolute;left:6px;bottom:6px;text-shadow:0 0 4px #000';
+      f.appendChild(l);
+      document.body.appendChild(f);
+      return { el: f, label: l };
+    })();
+    this.frame = vf.el; this.label = vf.label;
+
+    // speed buttons  [ - ]  Speed x1  [ + ]  and the coordinates readout, as one panel under the Astro cam
+    this.astroPanel = ui.addPanel({
+      id: 'astro', title: 'Astro', dock: 'right',
+      build: (body) => {
+        const el = (tag, parent, text, cls) => {
+          const n = document.createElement(tag);
+          if (cls) n.className = cls;
+          if (text !== undefined) n.textContent = text;
+          parent?.appendChild(n);
+          return n;
+        };
+        const row = el('div', body, undefined, 'ui-row');
+        const btn = (txt, title, fn) => {
+          const b = el('button', row, txt); b.title = title;
+          b.addEventListener('click', () => { fn(); b.blur(); });
+          return b;
+        };
+        btn('\u2212', 'Slower', () => this.setSpeed(this.speedIdx - 1));
+        this.speedTxt = el('span', row);
+        this.speedTxt.style.cssText = 'flex:1;text-align:center;cursor:pointer;white-space:nowrap;font-weight:600;';
+        this.speedTxt.title = 'click = back to normal speed';
+        this.speedTxt.addEventListener('click', () => this.setSpeed(SPEED_STEPS.indexOf(1)));
+        btn('+', 'Faster', () => this.setSpeed(this.speedIdx + 1));
+        this.coords = el('pre', body);               // toggled with the V key
+        this.coords.style.cssText = 'display:none;margin:6px 0 0;font:12px monospace;color:#9f9;white-space:pre;overflow:auto;';
+      },
+    });
+    this.setSpeed(this.speedIdx);
   }
 
   setSpeed(i) {
@@ -431,7 +439,7 @@ export class CharacterModule extends Module {
     if (this.group) this.ctx.scene.remove(this.group);
     for (const g of this.geos || []) g.dispose();
     for (const m of this.mats || []) m.dispose();
-    this.coords?.remove();
-    this.speedBar?.remove();
+    this.ctx.ui?.removePanel('astro');
+    this.ctx.ui?.reserve?.('right', 'astroCam', 0);
   }
 }

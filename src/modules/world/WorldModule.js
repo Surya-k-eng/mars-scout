@@ -182,6 +182,7 @@ function buildIndex(N, valid, cov) {
 
 export class WorldModule extends Module {
   static id = 'world';
+  static requires = ['ui'];
 
   async init() {
     this.alive = true;
@@ -323,7 +324,7 @@ export class WorldModule extends Module {
       return s ? (s.h - minE) * VERT_EXAG + s.order * LIFT : null;
     };
     this.ctx.bus.emit(EVENTS.TERRAIN_READY, terrain);
-    this.legend = new OverlayLegend(this);                    // layers icon + tick boxes (uses legendData / setLegendItem below)
+    this.legend = new OverlayLegend(this, { ui: this.ctx.ui });   // layers panel in the UI dock (no ui = old floating icon) (uses legendData / setLegendItem below)
 
     this.refine();
     this.timer = setInterval(() => this.refine(), 100);

@@ -7,8 +7,8 @@ import { MapPickModule } from './modules/mappick/MapPickModule.js';
 import { TitleScreenModule } from './modules/ui/TitleScreen.js';
 import { MineralPickModule } from './modules/mappick/MineralPickModule.js';
 import { MineralSearchModule } from './modules/mappick/MineralSearchModule.js';
-
-
+import { UIModule } from './modules/ui/UIModule.js';
+import { HawkModule } from './modules/character/HawkModule.js';
 
 export default [
   WorldModule,
@@ -18,4 +18,6 @@ export default [
   TitleScreenModule,
   MineralPickModule,
   MineralSearchModule,
+  UIModule,
+  HawkModule,
 ];

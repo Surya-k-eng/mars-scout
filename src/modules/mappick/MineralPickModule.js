@@ -22,19 +22,9 @@ const FADE_NEAR = 6000;             // camera height at/below which dots are ful
 const FADE_FAR = 30000;             // camera height at/above which dots are at full strength (no outline)
 const COLORS = { olivine: '#7CFC00', pyroxene: '#FFA726', hydrous: '#4FC3F7', multi: '#FFFFFF' };
 
-const CSS = `
-.mpk-panel{position:fixed;left:12px;bottom:12px;z-index:1003;width:300px;
-  font:12px/1.4 system-ui,sans-serif;color:#eee;background:rgba(20,22,26,.9);
-  border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:10px 12px}
-.mpk-panel h4{margin:0 0 6px;font-size:13px}
-.mpk-panel button{font:inherit;margin:4px 4px 0 0;padding:3px 8px;cursor:pointer}
-.mpk-dim{opacity:.7}
-.ms-panel{z-index:1003 !important}   /* keep the Mineral search panel above the map overlay */
-`;
-
 export class MineralPickModule extends MapPickModule {
   static id = 'mineralPick';
-  static requires = ['world'];
+  static requires = ['world', 'ui'];
 
   async init() {
     this.sel = null;                // selected hotspot { lon, lat, label, parts, area_km2, outline }
@@ -47,9 +37,6 @@ export class MineralPickModule extends MapPickModule {
     window.addEventListener('mineral:pick', this.onPickEvt);
     if (this.ctx.bus?.on) this._offResults = this.ctx.bus.on('mineral:results', (r) => { this.hotspots = r?.hotspots || (Array.isArray(r) ? r : []); });
     this.buildMineralPanel();
-    const apply = (m) => { if (this.mpanel) this.mpanel.style.display = m === 'targets' ? '' : 'none'; };
-    apply(this.ctx.state.get?.('searchMode'));
-    this._offMode2 = this.ctx.bus?.on?.('search:mode', apply);   // own name: MapPickModule keeps its own _offMode
   }
 
   // MapPickModule.setMode() turns every mode except 'landmarks' into 'coordinates' and writes that to
@@ -214,27 +201,26 @@ export class MineralPickModule extends MapPickModule {
 
   // ---- panel -------------------------------------------------------------------
 
+  // ---- UI WIRING: the only place this module creates DOM ----------------------------------------------------
+  // Layout, styling, show/hide and event isolation come from UIModule (ctx.ui). Change pick/zoom behaviour anywhere
+  // else freely; just keep writing to this.minfo (via refresh()) and this.mmsg (via say()).
   buildMineralPanel() {
-    const el = (tag, parent, text, cls) => {
-      const n = document.createElement(tag);
-      if (cls) n.className = cls;
-      if (text !== undefined) n.textContent = text;
-      parent?.appendChild(n);
-      return n;
-    };
-    this.mstyle = el('style', document.head, CSS);
-    const root = this.mpanel = el('div', document.body, undefined, 'mpk-panel');
-    el('h4', root, 'Mineral pick');
-    this.minfo = el('div', root);
-    const btn = (text, fn) => { const b = el('button', root, text); b.addEventListener('click', () => { fn(); b.blur(); }); return b; };
-    btn('Zoom to it', () => this.sel && this.select(this.sel));
-    btn('Use as next point (A, then B)', () => {
-      if (!this.sel) { this.say('Click a result in the Mineral search panel first.'); return; }
-      this.addHotspotPick(this.sel);
+    const ui = this.ctx.ui, el = ui.el;
+    ui.addPanel({
+      id: 'mineralPick', title: 'Mineral pick', dock: 'left',
+      visibleWhen: { searchMode: 'targets' },
+      build: (root) => {
+        this.minfo = el('div', root);
+        const btn = (text, fn) => { const b = el('button', root, text); b.addEventListener('click', () => { fn(); b.blur(); }); return b; };
+        btn('Zoom to it', () => this.sel && this.select(this.sel));
+        btn('Use as next point (A, then B)', () => {
+          if (!this.sel) { this.say('Click a result in the Mineral search panel first.'); return; }
+          this.addHotspotPick(this.sel);
+        });
+        btn('Clear picks', () => this.clearPicks());
+        this.mmsg = el('div', root, '', 'ui-dim');
+      },
     });
-    btn('Clear picks', () => this.clearPicks());
-    this.mmsg = el('div', root, '', 'mpk-dim');
-    for (const ev of ['keydown', 'pointerdown', 'wheel', 'mousedown']) root.addEventListener(ev, (e) => e.stopPropagation());
     this.refresh();
   }
 
@@ -250,12 +236,10 @@ export class MineralPickModule extends MapPickModule {
   }
 
   dispose() {
-    this._offMode2?.();         // MapPickModule's own _offMode is released by super.dispose()
     window.removeEventListener('mineral:select', this.onSelect);
     window.removeEventListener('mineral:pick', this.onPickEvt);
     try { this._offResults?.(); } catch { /* ignore */ }
-    this.mpanel?.remove();
-    this.mstyle?.remove();
+    this.ctx.ui?.removePanel('mineralPick');
     super.dispose();
   }
 }

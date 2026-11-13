@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hawk Cam</title>
+<style>
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; cursor:none; }
+  canvas { position:fixed; inset:0; width:100vw; height:100vh; display:block; background:#000; }
+  #msg {
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center; text-align:center;
+    color:#fff; font:300 15px/1.6 system-ui,sans-serif; letter-spacing:.2em; text-transform:uppercase;
+    pointer-events:none; transition:opacity .6s;
+  }
+  #hud {
+    position:fixed; left:18px; bottom:14px; color:#fff; font:600 11px/1 system-ui,sans-serif;
+    text-shadow:0 0 4px #000; opacity:.0; transition:opacity .4s; pointer-events:none;
+  }
+  body.hud #hud { opacity:.8; }
+  body.hud { cursor:default; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="msg">Waiting for the map tab…<br>Open the map in this browser, put the cursor on the terrain and press H</div>
+<div id="fps" style="position:fixed;right:12px;bottom:10px;color:#fff;opacity:.5;font:11px system-ui,sans-serif">0 fps</div>
+<div id="hud"></div>
+<script>
+const CHANNEL = 'mars-hawk';
+const canvas = document.getElementById('c');
+const g = canvas.getContext('2d');
+const msg = document.getElementById('msg');
+const hud = document.getElementById('hud');
+let state = 'idle', lastFrame = 0, last = null, hudTimer, incoming = null, raf = 0;
+
+// always paint only the newest frame, once per display refresh (older frames are dropped, never queued)
+function paint() {
+  raf = 0;
+  if (!incoming) return;
+  last?.close?.();
+  last = incoming; incoming = null;
+  draw(last);
+}
+
+function fit() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(innerWidth * dpr);
+  canvas.height = Math.round(innerHeight * dpr);
+  if (last) draw(last);
+}
+addEventListener('resize', fit);
+
+// draw the newest frame as large as possible with the right aspect (black bars if the window differs)
+function draw(bmp) {
+  const cw = canvas.width, ch = canvas.height;
+  const s = Math.min(cw / bmp.width, ch / bmp.height);
+  const w = bmp.width * s, h = bmp.height * s;
+  g.fillStyle = '#000'; g.fillRect(0, 0, cw, ch);
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(bmp, (cw - w) / 2, (ch - h) / 2, w, h);
+}
+
+function setMsg() {
+  const streaming = state === 'orbit' && performance.now() - lastFrame < 3000;
+  msg.style.opacity = streaming ? '0' : '1';
+  if (!streaming) {
+    msg.innerHTML = state === 'orbit'
+      ? 'Connecting to Hawk…'
+      : 'Waiting for the map tab…<br>Press H on the map to start Hawk';
+  }
+}
+
+let frames = 0;
+setInterval(() => { document.getElementById('fps').textContent = frames + ' fps'; frames = 0; }, 1000);
+
+const chan = new BroadcastChannel(CHANNEL);
+chan.onmessage = async (e) => {
+  const d = e.data;
+  if (d?.type === 'status') { state = d.state; setMsg(); }
+  else if (d?.type === 'frame' && (d.bmp || d.blob)) {
+    state = 'orbit';
+    frames++;
+    lastFrame = performance.now();
+    try {
+      const bmp = d.bmp || await createImageBitmap(d.blob);
+      incoming?.close?.();
+      incoming = bmp;
+      if (!raf) raf = requestAnimationFrame(paint);
+    } catch {}
+    setMsg();
+    if (d.lon != null) hud.textContent = `HAWK  ${d.lat.toFixed(4)}, ${d.lon.toFixed(4)}`;
+  }
+};
+
+// the map only streams while somebody pings it
+const ping = () => chan.postMessage({ type: 'ping' });
+ping(); setInterval(ping, 1000); setInterval(setMsg, 500);
+
+// F or double click = fullscreen, mouse move shows the HUD briefly
+const toggleFs = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'f') toggleFs(); });
+addEventListener('dblclick', toggleFs);
+addEventListener('mousemove', () => {
+  document.body.classList.add('hud'); clearTimeout(hudTimer);
+  hudTimer = setTimeout(() => document.body.classList.remove('hud'), 2000);
+});
+fit();
+</script>
+</body>
+</html>

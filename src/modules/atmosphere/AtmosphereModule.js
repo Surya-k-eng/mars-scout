@@ -86,9 +86,7 @@ const LOG_MS = 8000;             // how long a "what changed" line stays on scre
 const HUD_KEYS = [['1', 'Noon'], ['2', 'Day'], ['3', 'Sunset'], ['4', 'Dust'], ['5', 'Night'],
   ['Space', 'Pause'], ['[', 'Slower'], [']', 'Faster']];
 const HUD_CSS = `
-.atm-hud{position:fixed;left:12px;bottom:12px;z-index:20;pointer-events:none;min-width:270px;
-  font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;color:#9fe6a0;background:rgba(20,22,26,.78);
-  border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 12px}
+.atm-hud{font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;color:#9fe6a0}
 .atm-time{font-size:16px;font-weight:700;color:#e8f7e8}
 .atm-dim{opacity:.75}
 .atm-speed{margin:4px 0 8px;color:#ffd98a}
@@ -182,6 +180,7 @@ const dirFromAngles = (elevDeg, azimDeg, out) => {
 
 export class AtmosphereModule extends Module {
   static id = 'atmosphere';
+  static requires = ['ui'];
 
   async init() {
     const { scene, renderer } = this.ctx;
@@ -477,6 +476,9 @@ export class AtmosphereModule extends Module {
   }
 
   // ---- on-screen panel ----
+  // ---- UI WIRING: the only place this module creates its panel ----------------------------------------------
+  // Layout, box styling, show/hide and event isolation come from UIModule. Change the clock / sky logic anywhere
+  // else freely; just keep writing to this.hudTime, this.hudSun, this.hudSpeed, this.hudKeys, this.hudLog (via note()).
   buildHud() {
     const el = (tag, cls, parent, text) => {
       const n = document.createElement(tag);
@@ -486,7 +488,9 @@ export class AtmosphereModule extends Module {
       return n;
     };
     this.hudStyle = el('style', '', document.head, HUD_CSS);
-    const root = this.hud = el('div', 'atm-hud', document.body);
+    this.hudPanel = this.ctx.ui.addPanel({ id: 'atmosphere', title: 'Sun & time', dock: 'left' });
+    const root = this.hud = this.hudPanel.body;      // everything below only fills this element
+    root.classList.add('atm-hud');
     this.hudTime = el('div', 'atm-time', root);
     this.hudSun = el('div', 'atm-dim', root);
     this.hudSpeed = el('div', 'atm-speed', root);
@@ -544,7 +548,7 @@ export class AtmosphereModule extends Module {
     cancelAnimationFrame(this.raf);
     if (this.onKey) window.removeEventListener('keydown', this.onKey);
     if (this.hudTimers) Object.values(this.hudTimers).forEach(clearTimeout);
-    this.hud?.remove();
+    this.ctx.ui?.removePanel('atmosphere'); this.hud = null;
     this.hudStyle?.remove();
     const { scene, renderer } = this.ctx;
     if (this.group) {

@@ -1,5 +1,4 @@
-﻿
-import sys, os, re, math, requests, rasterio
+﻿import sys, os, re, math, requests, rasterio
 from rasterio.windows import from_bounds, Window
 
 if len(sys.argv) < 3:
@@ -33,22 +32,6 @@ def window_for(src):
     cov = (inter.width * inter.height) / (full.width * full.height)
     return inter.round_offsets().round_lengths(), cov
 
-def download(url, path):
-    have = os.path.getsize(path) if os.path.exists(path) else 0
-    h = {"Range": f"bytes={have}-"} if have else {}
-    r = requests.get(url, headers=h, stream=True, timeout=60)
-    if r.status_code == 416:
-        return
-    r.raise_for_status()
-    mode = "ab" if r.status_code == 206 else "wb"
-    total = int(r.headers.get("content-length", 0)) + (have if mode == "ab" else 0)
-    done = have if mode == "ab" else 0
-    with open(path, mode) as fh:
-        for chunk in r.iter_content(1 << 20):
-            fh.write(chunk); done += len(chunk)
-            print(f"\r  {done/1e6:.0f} / {total/1e6:.0f} MB", end="", flush=True)
-    print()
-
 print(f"Box: lat {S:.3f}..{N:.3f}, lon {W:.3f}..{E:.3f}")
 q = ("https://oderest.rsl.wustl.edu/live2?query=products&target=mars&ihid=MRO&iid=CRISM&pt=MTRDR&loc=b"
      f"&minlat={S}&maxlat={N}&westernlon={W}&easternlon={E}&results=f&output=JSON")
@@ -71,28 +54,32 @@ if best is None:
     sys.exit("No SR product fully covers this box. Try a smaller HALF_SIZE.")
 
 obs = best["FileName"].split("_")[0].lower()
-os.makedirs("cache", exist_ok=True)
-img = f"cache/{obs}_sr.img"; hdr = f"cache/{obs}_sr.hdr"
 print("Using", best["FileName"])
-download(best["URL"], img)
-download(best["URL"].rsplit(".", 1)[0] + ".hdr", hdr)
 
+# Band names: the .hdr is only a few KB, fetch it directly
 names = []
-m = re.search(r"band names\s*=\s*\{(.*?)\}", open(hdr).read(), re.S | re.I)
-if m:
-    names = [n.strip() for n in m.group(1).replace("\n", " ").split(",")]
+hdr_url = best["URL"].rsplit(".", 1)[0] + ".hdr"
+try:
+    txt = requests.get(hdr_url, timeout=60).text
+    m = re.search(r"band names\s*=\s*\{(.*?)\}", txt, re.S | re.I)
+    if m:
+        names = [n.strip() for n in m.group(1).replace("\n", " ").split(",")]
+except Exception as e:
+    print("  could not read .hdr:", e)
 
-with rasterio.open(img) as src:
+# Windowed remote read: only the bytes for the chosen box are fetched
+with rasterio.open("/vsicurl/" + best["URL"]) as src:
     win, cov = window_for(src)
     data = src.read(window=win)
     prof = src.profile
     prof.update(driver="GTiff", height=data.shape[1], width=data.shape[2],
                 transform=src.window_transform(win))
-    out = f"{obs}_area.tif"
-    with rasterio.open(out, "w", **prof) as dst:
-        dst.write(data)
-        if len(names) == data.shape[0]:
-            dst.descriptions = names
+
+out = f"{obs}_area.tif"
+with rasterio.open(out, "w", **prof) as dst:
+    dst.write(data)
+    if len(names) == data.shape[0]:
+        dst.descriptions = names
 open(f"{obs}_bands.txt", "w").write("\n".join(f"{i} {n}" for i, n in enumerate(names, 1)))
-print(f"\nSaved {out}  shape={data.shape}  {data.nbytes/1e6:.1f} MB")
+print(f"\nSaved {out}  shape={data.shape}  {data.nbytes/1e6:.2f} MB")
 print(f"Band names in {obs}_bands.txt")

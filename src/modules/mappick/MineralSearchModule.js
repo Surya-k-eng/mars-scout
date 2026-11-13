@@ -7,7 +7,7 @@ import { Module } from '../../core/Module.js';   // same relative path TitleScre
 //   - emits  bus 'mineral:results'  { hotspots: [...] }   -> MineralPickModule draws the dots / outlines
 //   - clicking a result dispatches window 'mineral:select'  { lon, lat, parts, region, area_km2, outline }  -> map zooms there
 //   - double-click a result dispatches window 'mineral:pick' -> sets it as point A / B
-//   - panel is only visible when the title screen chose "Search by scientific targets" (searchMode === 'targets')
+//   - (panel is built through ctx.ui; UIModule must be registered first) only visible when the title screen chose "Search by scientific targets" (searchMode === 'targets')
 //
 // Put this file next to MineralPickModule.js and register it in src/modules.config.js.
 
@@ -18,39 +18,15 @@ const MINERALS = [
   ['hydrous',  '#4FC3F7'],
 ];
 
-const CSS = `
-.ms-panel{position:fixed;right:12px;top:12px;z-index:1003;width:290px;
-  font:12px/1.4 system-ui,sans-serif;color:#eee;background:rgba(20,22,26,.92);
-  border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:10px 12px}
-.ms-panel h4{margin:0 0 6px;font-size:13px}
-.ms-panel label{display:flex;align-items:center;gap:6px;margin:2px 0;cursor:pointer}
-.ms-panel .ms-sw{width:10px;height:10px;border-radius:50%;border:1px solid #000;display:inline-block}
-.ms-panel input[type=number],.ms-panel select{font:inherit;width:70px;background:#111;color:#eee;border:1px solid #444;border-radius:4px;padding:2px 4px}
-.ms-panel .ms-row{display:flex;align-items:center;gap:8px;margin:6px 0}
-.ms-panel button{font:inherit;padding:3px 10px;cursor:pointer}
-.ms-panel .ms-list{max-height:240px;overflow-y:auto;margin-top:6px;border-top:1px solid rgba(255,255,255,.12)}
-.ms-panel .ms-item{display:flex;align-items:center;gap:6px;padding:4px 2px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.07)}
-.ms-panel .ms-item:hover{background:rgba(255,255,255,.08)}
-.ms-panel .ms-item.sel{background:rgba(255,213,74,.18)}
-.ms-panel .ms-dim{opacity:.7}
-`;
-
 export class MineralSearchModule extends Module {
   static id = 'mineralSearch';
-  static requires = [];
+  static requires = ['ui'];
 
   async init() {
     this.all = [];
     this.results = [];
     this.selIndex = -1;
     this.buildPanel();
-
-    // visibility follows the mode chosen on the title screen
-    const apply = (m) => { if (this.panel) this.panel.style.display = m === 'targets' ? '' : 'none'; };
-    apply(this.ctx.state?.get?.('searchMode'));
-    const off = this.ctx.bus?.on?.('search:mode', apply);
-    this._offMode = typeof off === 'function' ? off : null;
-
     await this.load();
   }
 
@@ -106,54 +82,50 @@ export class MineralSearchModule extends Module {
 
   // ---- panel -------------------------------------------------------------------
 
+  // ---- UI WIRING: the only place this module creates DOM ----------------------------------------------------
+  // Layout, styling, show/hide and event isolation come from UIModule (ctx.ui). Change search behaviour anywhere
+  // else freely; just keep writing to this.checks, this.areaInput, this.limitSel (read), this.msg and this.list (write).
   buildPanel() {
-    const el = (tag, parent, text, cls) => {
-      const n = document.createElement(tag);
-      if (cls) n.className = cls;
-      if (text !== undefined) n.textContent = text;
-      parent?.appendChild(n);
-      return n;
-    };
-    this.style = el('style', document.head, CSS);
-    const root = this.panel = el('div', document.body, undefined, 'ms-panel');
-    root.style.display = 'none';
-    el('h4', root, 'Mineral search');
+    const ui = this.ctx.ui, el = ui.el;
+    ui.addPanel({
+      id: 'mineralSearch', title: 'Mineral search', dock: 'right',
+      visibleWhen: { searchMode: 'targets' },      // UIModule shows/hides it from the title-screen mode
+      build: (root) => {
+        this.checks = {};
+        for (const [name, color] of MINERALS) {
+          const lab = el('label', root);
+          const cb = el('input', lab); cb.type = 'checkbox'; cb.checked = true;
+          const sw = el('span', lab, undefined, 'ui-sw'); sw.style.background = color;
+          el('span', lab, name);
+          this.checks[name] = cb;
+        }
 
-    this.checks = {};
-    for (const [name, color] of MINERALS) {
-      const lab = el('label', root);
-      const cb = el('input', lab); cb.type = 'checkbox'; cb.checked = true;
-      const sw = el('span', lab, undefined, 'ms-sw'); sw.style.background = color;
-      el('span', lab, name);
-      this.checks[name] = cb;
-    }
+        const r1 = el('div', root, undefined, 'ui-row');
+        el('span', r1, 'Min area km²');
+        this.areaInput = el('input', r1); this.areaInput.type = 'number'; this.areaInput.min = '0'; this.areaInput.value = '0';
 
-    const r1 = el('div', root, undefined, 'ms-row');
-    el('span', r1, 'Min area km²');
-    this.areaInput = el('input', r1); this.areaInput.type = 'number'; this.areaInput.min = '0'; this.areaInput.value = '0';
+        const r2 = el('div', root, undefined, 'ui-row');
+        el('span', r2, 'Show top');
+        this.limitSel = el('select', r2);
+        for (const n of [10, 25, 50]) { const o = el('option', this.limitSel, String(n)); o.value = String(n); }
+        this.limitSel.value = '50';
 
-    const r2 = el('div', root, undefined, 'ms-row');
-    el('span', r2, 'Show top');
-    this.limitSel = el('select', r2);
-    for (const n of [10, 25, 50]) { const o = el('option', this.limitSel, String(n)); o.value = String(n); }
-    this.limitSel.value = '50';
+        const b = el('button', root, 'Search');
+        b.addEventListener('click', () => { this.search(); b.blur(); });
 
-    const b = el('button', root, 'Search');
-    b.addEventListener('click', () => { this.search(); b.blur(); });
-
-    this.msg = el('div', root, '', 'ms-dim');
-    this.list = el('div', root, undefined, 'ms-list');
-
-    for (const ev of ['keydown', 'pointerdown', 'wheel', 'mousedown']) root.addEventListener(ev, (e) => e.stopPropagation());
+        this.msg = el('div', root, '', 'ui-dim');
+        this.list = el('div', root, undefined, 'ui-list');
+      },
+    });
   }
 
   renderList() {
     this.list.textContent = '';
     this.results.forEach((h, i) => {
       const row = document.createElement('div');
-      row.className = 'ms-item' + (i === this.selIndex ? ' sel' : '');
+      row.className = 'ui-item' + (i === this.selIndex ? ' sel' : '');
       const color = (MINERALS.find(([m]) => m === h.mineral) || [])[1] || '#fff';
-      const sw = document.createElement('span'); sw.className = 'ms-sw'; sw.style.background = color;
+      const sw = document.createElement('span'); sw.className = 'ui-sw'; sw.style.background = color;
       const t = document.createElement('span');
       t.textContent = `#${h.rank ?? i + 1} ${h.mineral}  ${h.lat.toFixed(1)}°, ${h.lon.toFixed(1)}°  score ${h.score}`;
       row.append(sw, t);
@@ -166,9 +138,7 @@ export class MineralSearchModule extends Module {
   setMsg(text) { if (this.msg) this.msg.textContent = text; }
 
   dispose() {
-    try { this._offMode?.(); } catch { /* ignore */ }
-    this.panel?.remove();
-    this.style?.remove();
+    this.ctx.ui?.removePanel('mineralSearch');
     super.dispose();
   }
 }

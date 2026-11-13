@@ -144,13 +144,43 @@ function resample(pts, step) {
   return out;
 }
 
+// The terrain material can only be patched once, and MineralPickModule extends this class, so both instances share
+// the patch marker and ONE set of uniform objects. A route is shown by changing their values, never by replacing them
+// (already-compiled materials keep pointing at these exact objects).
+const ROUTE_PATCHED = new WeakSet();
+const ROUTE_U = {
+  uRouteMask: { value: null },
+  uRouteBox: { value: new THREE.Vector4() },
+  uRouteColor: { value: new THREE.Color(PLAN.color) },
+  uRouteOn: { value: 0 },
+};
+
+// Fog off while the map is being picked, on top of atmosphere.setMapPickMode(). Shared by every instance
+// (MineralPickModule extends this class): the first one to start saves the real fog, the last one to stop puts it back.
+const FOG = { saved: null, users: 0 };
+function fogOff(scene) {
+  if (FOG.users++ === 0) FOG.saved = scene.fog;
+  scene.fog = null;
+}
+function fogOn(scene) {
+  if (FOG.users > 0 && --FOG.users === 0) {
+    if (FOG.saved && !scene.fog) scene.fog = FOG.saved;
+    FOG.saved = null;
+  }
+}
+
+// Only ONE instance may own the camera, the pick listeners and the panels at a time. MineralPickModule extends this
+// class and also calls enter() at boot; two instances then fight over the camera every frame (one restores the 3D
+// view, the other keeps forcing top-down), which shows up as a sideways / flipped terrain after picking.
+let OWNER = null;
+
 const fmtDist = (m) => (m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${m.toFixed(0)} m`);
 const fmtLat = (v) => `${Math.abs(v).toFixed(4)}° ${v >= 0 ? 'N' : 'S'}`;
 const fmtLon = (v) => `${Math.abs(v).toFixed(4)}° ${v >= 0 ? 'E' : 'W'}`;
 
 export class MapPickModule extends Module {
   static id = 'mappick';
-  static requires = ['world'];
+  static requires = ['world', 'ui'];
 
   async init() {
     this.active = false;
@@ -191,6 +221,11 @@ export class MapPickModule extends Module {
   // ===================== map picking =====================
 
   enter() {
+    if (OWNER && OWNER !== this && (OWNER.active || OWNER.flatView)) {
+      console.warn(`[mappick] ${this.constructor.name} stays idle: ${OWNER.constructor.name} already owns the map view`);
+      return;
+    }
+    OWNER = this;
     const cam = this.ctx.camera;
     const r = this.terrain.regionRect;
     const el = this.el = this.ctx.renderer.domElement;
@@ -218,7 +253,10 @@ export class MapPickModule extends Module {
     cam.updateProjectionMatrix();
 
     this.active = true;
-    this.ctx.state.get('atmosphere')?.setMapPickMode(true);
+    fogOff(this.ctx.scene); this._fogOff = true;          // before setMapPickMode, so the real fog is what gets saved
+    const atm = this.ctx.state.get('atmosphere');
+    if (atm?.setMapPickMode) atm.setMapPickMode(true);
+    else console.warn('[mappick] state "atmosphere" has no setMapPickMode(): fog is switched off here instead');
     this.picks = [];
     this.ctx.state.set('mode', 'map');
     this.makeHud();
@@ -292,11 +330,14 @@ export class MapPickModule extends Module {
     window.addEventListener('keydown', this.onKey);
 
     // Coordinate box: appears where the cursor rests, disappears as soon as it moves.
-    this.tip = document.createElement('div');
-    this.tip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;padding:5px 9px;' +
-      'background:rgba(16,18,24,.88);color:#fff;font:12px/1.35 system-ui,sans-serif;border-radius:6px;' +
-      'border:1px solid rgba(255,255,255,.18);max-width:280px;white-space:normal;box-shadow:0 2px 8px rgba(0,0,0,.4)';
-    document.body.appendChild(this.tip);
+    this.tip = this.ctx.ui?.tooltip?.() ?? (() => {          // UIModule helper if it exists, else the original hand-built box
+      const t = document.createElement('div');
+      t.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;padding:5px 9px;' +
+        'background:rgba(16,18,24,.88);color:#fff;font:12px/1.35 system-ui,sans-serif;border-radius:6px;' +
+        'border:1px solid rgba(255,255,255,.18);max-width:280px;white-space:normal;box-shadow:0 2px 8px rgba(0,0,0,.4)';
+      document.body.appendChild(t);
+      return t;
+    })();
     this.hideTip = () => {
       clearTimeout(this.tipTimer); this.tipTimer = null;
       if (this.tip) this.tip.style.display = 'none';
@@ -337,6 +378,7 @@ export class MapPickModule extends Module {
     const lock = () => {
       this.lockRaf = requestAnimationFrame(lock);
       if (!this.active && !this.flatView) return;
+      if (this.active && this.ctx.scene.fog) this.ctx.scene.fog = null;   // something re-applied fog: keep it off while picking
       if (ctl) {
         ctl.enabled = false;
         ctl.target?.set(cam.position.x, 0, cam.position.z);   // so a controls.update() can never tilt it
@@ -505,35 +547,43 @@ export class MapPickModule extends Module {
 
   setFeatureStatus(text) { if (this.featMsg) this.featMsg.textContent = text; this.featStatus = text; }
 
+  // ---- UI WIRING (on ctx.ui): makeFeatureUI() and showPanel() are the only panel code in this file ------------
+  // Layout, styling and event isolation come from UIModule. Change feature / route logic anywhere else freely;
+  // just keep writing to this.featCnt, this.featMsg (feature box) and keep passing the route numbers to showPanel().
+  // Also on ctx.ui: makeCoordBox() (typed coordinates). NOT on ctx.ui yet (hand-built, fixed position): makeHud() banner,
+  // makeLandmarkBox(), the hover tip.
   makeFeatureUI() {
-    const cv = this.featCv = document.createElement('canvas');
-    cv.style.cssText = 'position:fixed;pointer-events:none;z-index:900';
-    document.body.appendChild(cv);
+    this.featCv = this.ctx.ui?.canvasLayer?.() ?? (() => {   // UIModule helper if it exists, else the original canvas
+      const cv = document.createElement('canvas');
+      cv.style.cssText = 'position:fixed;pointer-events:none;z-index:900';
+      document.body.appendChild(cv);
+      return cv;
+    })();
 
-    const box = this.featBox = document.createElement('div');
-    box.style.cssText = 'position:fixed;right:16px;top:16px;z-index:1001;padding:6px 10px;background:rgba(0,0,0,0.75);' +
-      'color:#fff;font:12px/1.5 system-ui,sans-serif;border-radius:8px;border:1px solid rgba(255,255,255,0.3);';
     const dot = (c) => `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;border:2px solid ${c};margin:0 4px 0 8px;vertical-align:middle"></span>`;
-    const btn = document.createElement('label');
-    btn.style.cssText = 'cursor:pointer;user-select:none;display:block;font-weight:600';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.checked = true; cb.style.marginRight = '6px';
-    cb.onchange = () => { this.showFeat = cb.checked; this.hideTip?.(); };
-    btn.append(cb, 'Map features');
-    const legend = document.createElement('div');
-    legend.innerHTML = `${dot(FEATURE_COLORS.crater).replace('margin:0 4px','margin:0 4px 0 0')}Crater${dot(FEATURE_COLORS.mons)}Mountain${dot(FEATURE_COLORS.other)}Other`;
-    const cnt = this.featCnt = document.createElement('div');
-    cnt.style.cssText = 'opacity:.75;font-size:11px';
-    const msg = this.featMsg = document.createElement('div');
-    msg.style.cssText = 'color:#ffb4b4;font-size:11px';
-    msg.textContent = this.featStatus || '';
-    box.append(btn, legend, cnt, msg);
-    document.body.appendChild(box);
+    this.featPanel = this.ctx.ui.addPanel({
+      id: 'mapFeatures', title: 'Map features', dock: 'right',
+      build: (body, ui) => {
+        const btn = ui.el('label', body, undefined, undefined);
+        btn.style.cssText = 'cursor:pointer;user-select:none;font-weight:600';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.checked = true;
+        cb.onchange = () => { this.showFeat = cb.checked; this.hideTip?.(); };
+        btn.append(cb, 'Show on map');
+        const legend = ui.el('div', body);
+        legend.innerHTML = `${dot(FEATURE_COLORS.crater).replace('margin:0 4px','margin:0 4px 0 0')}Crater${dot(FEATURE_COLORS.mons)}Mountain${dot(FEATURE_COLORS.other)}Other`;
+        this.featCnt = ui.el('div', body, undefined, 'ui-dim');
+        this.featMsg = ui.el('div', body);
+        this.featMsg.style.cssText = 'color:#ffb4b4;font-size:11px';
+        this.featMsg.textContent = this.featStatus || '';
+      },
+    });
+    this.featBox = this.featPanel.root;   // blockedRects() keeps the map labels out from under it
   }
 
   removeFeatureUI() {
     this.featCv?.remove(); this.featCv = null;
-    this.featBox?.remove(); this.featBox = null; this.featMsg = null; this.featCnt = null; this.featCount = -1;
+    this.ctx.ui?.removePanel('mapFeatures'); this.featPanel = null; this.featBox = null; this.featMsg = null; this.featCnt = null; this.featCount = -1;
     this.featHits = [];
   }
 
@@ -601,6 +651,7 @@ export class MapPickModule extends Module {
     const out = [];
     const add = (r) => { if (r && r.width > 20 && r.height > 20) out.push(r); };
     add(this.astroCamRect());
+    document.querySelectorAll('.ui-panel').forEach((p) => add(p.getBoundingClientRect()));
     const els = [this.findPanel('time', /\bsunset\b/i), this.coordBox, this.panel, this.panelBtn, this.hud, this.featBox];
     for (const el of els) {
       if (!el || !el.isConnected) continue;
@@ -750,6 +801,7 @@ export class MapPickModule extends Module {
     if (this.waitTimer) { clearInterval(this.waitTimer); this.waitTimer = null; }
     if (!this.active && !(dispose && this.flatView)) return;
     this.ctx.state.get('atmosphere')?.setMapPickMode(false);
+    if (this._fogOff) { fogOn(this.ctx.scene); this._fogOff = false; }
     const cam = this.ctx.camera, s = this.saved;
 
     if (FLAT_ONLY && !dispose) {
@@ -795,6 +847,7 @@ export class MapPickModule extends Module {
     this.removeHud();
     this.active = false;
     this.busy = false;
+    if (OWNER === this) OWNER = null;
     this.ctx.state.set('mode', 'world');
   }
 
@@ -1083,12 +1136,11 @@ export class MapPickModule extends Module {
     tex.needsUpdate = true;
 
     this.routeTex = tex;
-    this.routeU = {
-      uRouteMask: { value: tex },
-      uRouteBox: { value: new THREE.Vector4(x0, z0, w, h) },
-      uRouteColor: { value: new THREE.Color(PLAN.color) },
-      uRouteOn: { value: 1 },
-    };
+    ROUTE_U.uRouteMask.value = tex;
+    ROUTE_U.uRouteBox.value.set(x0, z0, w, h);
+    ROUTE_U.uRouteColor.value.set(PLAN.color);
+    ROUTE_U.uRouteOn.value = 1;
+    this.routeU = ROUTE_U;
 
     this.patchTerrainMaterials();
     let scanAt = 0;
@@ -1114,15 +1166,14 @@ export class MapPickModule extends Module {
   }
 
   patchMaterial(m) {
-    if (!m || this.patched.has(m) || m.isShaderMaterial) return;
-    this.patched.add(m);
+    if (!m || ROUTE_PATCHED.has(m) || m.isShaderMaterial) return;
+    ROUTE_PATCHED.add(m);
     const prev = m.onBeforeCompile;
-    const U = () => this.routeU;
     m.onBeforeCompile = (shader, renderer) => {
       prev?.call(m, shader, renderer);
       if (!shader.fragmentShader.includes('#include <dithering_fragment>')) return;
-      const u = U() || {};
-      Object.assign(shader.uniforms, u);
+      if (shader.vertexShader.includes('vRouteXZ')) return;       // already patched: never declare it twice
+      Object.assign(shader.uniforms, ROUTE_U);
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', '#include <common>\nvarying vec2 vRouteXZ;')
         .replace('#include <project_vertex>', `#include <project_vertex>
@@ -1151,7 +1202,10 @@ export class MapPickModule extends Module {
   clearRoute() {
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = null;
-    if (this.routeU) this.routeU.uRouteOn.value = 0;   // materials stay patched, the path just stops drawing
+    if (this.routeTex && ROUTE_U.uRouteMask.value === this.routeTex) {   // only switch off a route this instance drew
+      ROUTE_U.uRouteOn.value = 0;                      // materials stay patched, the path just stops drawing
+      ROUTE_U.uRouteMask.value = null;
+    }
     this.routeTex?.dispose();
     this.routeTex = null;
     this.routeU = null;
@@ -1360,67 +1414,59 @@ export class MapPickModule extends Module {
     return v;
   }
 
+  // UI WIRING (see makeFeatureUI): typed-coordinates panel in the left dock. The logic is add() below: it only reads the
+  // two fields (lat, lon) and writes this.coordMsg, then calls addPick().
   makeCoordBox() {
-    const box = this.coordBox = document.createElement('div');
-    Object.assign(box.style, {
-      position: 'fixed', left: '50%', bottom: '20px', transform: 'translateX(-50%)',
-      padding: '8px 12px', background: 'rgba(0,0,0,0.75)', color: '#fff', borderRadius: '8px',
-      font: '13px system-ui, sans-serif', zIndex: 1000, display: 'flex', gap: '8px',
-      alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '96vw',
+    this.coordPanel = this.ctx.ui.addPanel({
+      id: 'coordInput', title: 'Enter coordinates', dock: 'left',
+      build: (body, u) => {
+        const field = (ph) => {
+          const i = u.el('input', body);
+          i.type = 'text'; i.placeholder = ph; i.autocomplete = 'off';
+          i.style.cssText = 'display:block;width:100%;box-sizing:border-box;margin:4px 0;padding:5px 8px;border-radius:5px;' +
+            'border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.1);color:#fff;font:13px system-ui,sans-serif;outline:none;';
+          // typing must not trigger other shortcuts; Enter adds the point, Esc leaves the field
+          i.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') add();
+            else if (e.key === 'Escape') i.blur();
+          });
+          return i;
+        };
+        const lat = field('Latitude  e.g. 18.45'), lon = field('Longitude  e.g. 77.45');
+        const btn = u.el('button', body, 'Add point');
+        const msg = this.coordMsg = u.el('div', body);
+        msg.style.cssText = 'font-size:12px;min-height:14px;margin-top:4px;color:#ffb4b4';
+        const add = () => {
+          if (this.busy) return;
+          msg.style.color = '#ffb4b4';
+          // allow pasting "lat, lon" into the latitude field
+          if (lat.value.includes(',') && !lon.value.trim()) {
+            const [a, b] = lat.value.split(',');
+            lat.value = a.trim(); lon.value = (b || '').trim();
+          }
+          const la = this.parseCoord(lat.value, 'lat'), lo = this.parseCoord(lon.value, 'lon');
+          if (la == null || lo == null) { msg.textContent = 'Enter valid numbers, e.g. 18.45 and 77.45 (N/S/E/W allowed).'; return; }
+          const w = this.terrain.lonLatToWorld(lo, la), r = this.rect;
+          if (w.x < r.x0 || w.x > r.x1 || w.z < r.z0 || w.z > r.z1) { msg.textContent = 'That point is outside the loaded map area.'; return; }
+          const y = this.terrain.sampleWorld(w.x, w.z);
+          if (y == null || !Number.isFinite(y)) { msg.textContent = 'No terrain data at that location.'; return; }
+          const cam = this.ctx.camera;                       // centre the map on the new point
+          cam.position.x = THREE.MathUtils.clamp(w.x, r.x0, r.x1);
+          cam.position.z = THREE.MathUtils.clamp(w.z, r.z0, r.z1);
+          this.addPick({ x: w.x, y, z: w.z });
+          lat.value = ''; lon.value = '';
+          if (this.active && !this.busy) { msg.style.color = '#b6f0b6'; msg.textContent = `Point ${this.picks.length} added.`; }
+          else msg.textContent = '';
+        };
+        btn.addEventListener('click', add);
+      },
     });
-    const field = (ph) => {
-      const i = document.createElement('input');
-      i.type = 'text'; i.placeholder = ph; i.autocomplete = 'off';
-      Object.assign(i.style, {
-        width: '120px', padding: '5px 8px', borderRadius: '5px', border: '1px solid rgba(255,255,255,0.35)',
-        background: 'rgba(255,255,255,0.1)', color: '#fff', font: '13px system-ui, sans-serif', outline: 'none',
-      });
-      // typing must not trigger other shortcuts; Enter adds the point, Esc leaves the field
-      i.addEventListener('keydown', (e) => {
-        e.stopPropagation();
-        if (e.key === 'Enter') add();
-        else if (e.key === 'Escape') i.blur();
-      });
-      return i;
-    };
-    const lat = field('Latitude  e.g. 18.45'), lon = field('Longitude  e.g. 77.45');
-    const btn = document.createElement('button');
-    btn.textContent = 'Add point';
-    Object.assign(btn.style, {
-      padding: '5px 12px', borderRadius: '5px', border: '1px solid rgba(255,255,255,0.35)',
-      background: '#2d6cdf', color: '#fff', font: '13px system-ui, sans-serif', cursor: 'pointer',
-    });
-    const msg = this.coordMsg = document.createElement('span');
-    msg.style.cssText = 'flex-basis:100%;text-align:center;font-size:12px;min-height:14px;color:#ffb4b4';
-    const add = () => {
-      if (this.busy) return;
-      msg.style.color = '#ffb4b4';
-      // allow pasting "lat, lon" into the latitude field
-      if (lat.value.includes(',') && !lon.value.trim()) {
-        const [a, b] = lat.value.split(',');
-        lat.value = a.trim(); lon.value = (b || '').trim();
-      }
-      const la = this.parseCoord(lat.value, 'lat'), lo = this.parseCoord(lon.value, 'lon');
-      if (la == null || lo == null) { msg.textContent = 'Enter valid numbers, e.g. 18.45 and 77.45 (N/S/E/W allowed).'; return; }
-      const w = this.terrain.lonLatToWorld(lo, la), r = this.rect;
-      if (w.x < r.x0 || w.x > r.x1 || w.z < r.z0 || w.z > r.z1) { msg.textContent = 'That point is outside the loaded map area.'; return; }
-      const y = this.terrain.sampleWorld(w.x, w.z);
-      if (y == null || !Number.isFinite(y)) { msg.textContent = 'No terrain data at that location.'; return; }
-      const cam = this.ctx.camera;                       // centre the map on the new point
-      cam.position.x = THREE.MathUtils.clamp(w.x, r.x0, r.x1);
-      cam.position.z = THREE.MathUtils.clamp(w.z, r.z0, r.z1);
-      this.addPick({ x: w.x, y, z: w.z });
-      lat.value = ''; lon.value = '';
-      if (this.active && !this.busy) { msg.style.color = '#b6f0b6'; msg.textContent = `Point ${this.picks.length} added.`; }
-      else msg.textContent = '';
-    };
-    btn.onclick = add;
-    box.append(lat, lon, btn, msg);
-    document.body.appendChild(box);
+    this.coordBox = this.coordPanel.root;   // blockedRects() keeps map labels out from under it
   }
 
   updateHud() {
-    if (this.coordBox) this.coordBox.style.display = this.busy ? 'none' : 'flex';
+    this.coordPanel?.[this.busy ? 'hide' : 'show']();                 // hidden while the route is being planned
     if (this.lmBox) this.lmBox.style.display = this.busy ? 'none' : 'block';
     const how = this.mode === 'landmarks'
       ? 'search a landmark above, click the map, or type coordinates below'
@@ -1431,51 +1477,20 @@ export class MapPickModule extends Module {
 
   removeHud() {
     this.hud?.remove(); this.hud = null;
-    this.coordBox?.remove(); this.coordBox = null;
+    this.ctx.ui?.removePanel('coordInput'); this.coordPanel = null; this.coordBox = null;
     this.lmBox?.remove(); this.lmBox = null; this.lmInput = null; this.lmList = null; this.lmMsg = null; this.lmInfo = null;
     this.focusFeat = null;
   }
 
+  // UI WIRING (see makeFeatureUI): route info panel; the route logic only calls this with its numbers.
   showPanel({ a, b, straight, routeLen, maxSlope, limit }) {
     this.removePanel();
-    const d = this.panel = document.createElement('div');
-    Object.assign(d.style, {
-      position: 'fixed', left: '16px', top: '54px', minWidth: '250px', display: 'none',
-      padding: '10px 14px', background: 'rgba(0,0,0,0.78)', color: '#fff',
-      font: '13px/1.5 system-ui, sans-serif', borderRadius: '8px', zIndex: 1000, pointerEvents: 'none',
-    });
-    // toggle button (top-left): hidden by default, click to open / close the info box
-    const btn = this.panelBtn = document.createElement('button');
-    btn.textContent = 'Route info ▸';
-    
-    Object.assign(btn.style, {
-      position: 'fixed',
-      left: '300px',
-      top: '200px',
-      zIndex: 99999,
-
-      padding: '10px 18px',
-      color: '#f5e6d3',
-      border: '1px solid rgba(207, 104, 63, 0.65)',
-      borderRadius: '10px',
-      font: '500 13px system-ui, sans-serif',
-      cursor: 'pointer',
-      zIndex: 1001,
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-      boxShadow: '0 4px 18px rgba(0, 0, 0, 0.3)',
-      transition: 'background 0.2s ease, border-color 0.2s ease',
-    });
-
-    btn.onclick = () => {
-      const open = d.style.display === 'none';
-      d.style.display = open ? 'block' : 'none';
-      btn.textContent = open ? 'Route info ▾' : 'Route info ▸';
-    };
     const dot = (c) => `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c};margin-right:8px"></span>`;
     const bar = (c, extra = '') => `<span style="display:inline-block;width:22px;height:4px;background:${c};margin-right:8px;vertical-align:middle;${extra}"></span>`;
-    d.innerHTML = `
-      <div style="font-weight:600;margin-bottom:4px">Route info</div>
+    this.routePanel = this.ctx.ui.addPanel({
+      id: 'routeInfo', title: 'Route info', dock: 'left', collapsed: true,
+      build: (body) => {
+        body.innerHTML = `
       <div>${dot('#ff3030')}<b>A</b> ${fmtLat(a.lat)}, ${fmtLon(a.lon)}</div>
       <div>${dot('#ff3030')}<b>B</b> ${fmtLat(b.lat)}, ${fmtLon(b.lon)}</div>
       <div style="margin-top:6px">Straight distance: <b>${fmtDist(straight)}</b></div>
@@ -1485,12 +1500,14 @@ export class MapPickModule extends Module {
       <div>${dot('#ff3030')}Selected points</div>
       <div>${bar('#39ff88')}Planned route (painted into the terrain)</div>
       <div>${bar('#ffd23f')}Straight line (reference)</div>`;
-    document.body.append(btn, d);
+      },
+    });
+    this.panel = this.routePanel.root;
   }
 
   removePanel() {
-    this.panel?.remove(); this.panel = null;
-    this.panelBtn?.remove(); this.panelBtn = null;
+    this.ctx.ui?.removePanel('routeInfo');
+    this.routePanel = null; this.panel = null; this.panelBtn = null;
   }
 
   dispose() {

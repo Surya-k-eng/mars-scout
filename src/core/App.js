@@ -32,7 +32,7 @@ export class App {
     this.controls.minPolarAngle = THREE.MathUtils.degToRad(-10);   // can't go higher than 20° from straight down
     this.controls.maxPolarAngle = THREE.MathUtils.degToRad(70);   // can't go below 5° above the horizon
     this.controls.enableDamping = true;
-    this.camDebug = new CameraDebug(this.camera, this.controls, () => this.ctx?.state.get('terrain'));
+    //this.camDebug = new CameraDebug(this.camera, this.controls, () => this.ctx?.state.get('terrain'));
 
 
     // default lights; the sun module will take over the sun later

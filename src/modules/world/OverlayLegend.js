@@ -14,6 +14,11 @@
 // A section is "exclusive" by default: ticking one map layer unticks the others in that section (the shader draws
 // one map at a time). Give a section `exclusive: false` if the host can really draw several at once.
 //
+// Docked mode: new OverlayLegend(host, { ui: ctx.ui }) renders the same content as a collapsible panel in the UI dock
+// instead of the floating icon (no dragging / auto-placement then). Without `ui` it behaves exactly as before.
+// Everything about WHICH layers exist and HOW they switch lives in the host (legendData / setLegendItem); this file is
+// only the view, so changing layer behaviour never needs a change here.
+//
 // Usage: const legend = new OverlayLegend(host);  legend.show(false) hides it;  legend.refresh() re-reads the host
 // (call it after the host changes a layer by itself, e.g. the O key);  legend.dispose() removes it.
 
@@ -69,6 +74,13 @@ const CSS = `
 .ent i { flex: none; width: 10px; height: 10px; margin-top: 2px; border-radius: 2px; border: 1px solid rgba(255,255,255,.35); }
 `;
 
+// extra rules for docked mode: the panel is an ordinary block inside the UI dock, not a popup
+const DOCKED_CSS = `
+.wrap { height: auto; }
+.panel { position: static; display: block; width: auto; max-width: none; max-height: 55vh; padding: 0; border: 0;
+  border-radius: 0; background: none; box-shadow: none; backdrop-filter: none; }
+`;
+
 // Choose where the icon goes: walk the screen edges (right edge, left edge, bottom, top) and take the first spot
 // that overlaps none of the obstacle rectangles. Pure function so it can be tested without a browser.
 export function pickSlot(obstacles, vw, vh, size = 40, margin = 12, pad = 8) {
@@ -88,7 +100,7 @@ export function pickSlot(obstacles, vw, vh, size = 40, margin = 12, pad = 8) {
 export class OverlayLegend {
   constructor(host, opts = {}) {
     this.host = host;
-    this.o = { size: 40, margin: 12, z: 30, storageKey: 'overlayLegend', restore: true, ...opts };
+    this.o = { size: 40, margin: 12, z: 30, storageKey: 'overlayLegend', restore: true, ui: null, panelId: 'layers', ...opts };
     this.sections = [];
     this.rows = new Map();                 // "kind:id" -> { item, input, sec }
     this.isOpen = false;
@@ -112,7 +124,30 @@ export class OverlayLegend {
   }
 
   // ---- DOM --------------------------------------------------------------------------------------------------------
+  // Docked mode: same panel content, rendered inside a UIModule panel (collapsed until opened).
+  buildDocked() {
+    const ui = this.o.ui;
+    this.icon = document.createElement('button');   // detached stand-ins, so open/close/updateBadge keep working untouched
+    this.badge = document.createElement('span');
+    this.handle = ui.addPanel({
+      id: this.o.panelId, title: 'Map layers', dock: 'right', collapsed: true,
+      build: (body) => {
+        const root = ui.el('div', body).attachShadow({ mode: 'open' });   // own Shadow DOM, as before
+        root.innerHTML = `<style>${CSS}${DOCKED_CSS}</style><div class="wrap"><div class="panel show"></div></div>`;
+        this.panel = root.querySelector('.panel');
+      },
+    });
+    this.el = this.handle.root;
+  }
+
+  // show / hide the whole thing (floating icon or docked panel)
+  setVisible(v) {
+    if (this.handle) this.handle[v ? 'show' : 'hide']();
+    else this.el.style.display = v ? '' : 'none';
+  }
+
   build() {
+    if (this.o.ui) { this.buildDocked(); return; }
     const { size, z } = this.o;
     this.el = document.createElement('div');
     this.el.setAttribute('data-overlay-legend', '');
@@ -197,6 +232,7 @@ export class OverlayLegend {
   }
 
   moveTo(x, y) {
+    if (this.o.ui) return;                  // docked: the UI module does the layout
     const { size } = this.o;
     this.x = Math.min(Math.max(x, 4), Math.max(4, window.innerWidth - size - 4));
     this.y = Math.min(Math.max(y, 4), Math.max(4, window.innerHeight - size - 4));
@@ -206,7 +242,7 @@ export class OverlayLegend {
   }
 
   place() {
-    if (this.hidden) return;
+    if (this.hidden || this.o.ui) return;
     if (this.pinned) { this.moveTo(this.pinned.x, this.pinned.y); return; }
     const { size, margin } = this.o;
     const s = pickSlot(this.obstacles(), window.innerWidth, window.innerHeight, size, margin);
@@ -231,12 +267,12 @@ export class OverlayLegend {
   }
 
   // ---- open / close ------------------------------------------------------------------------------------------------
-  open() { this.isOpen = true; this.orient(); this.panel.classList.add('show'); this.icon.classList.add('open'); }
-  close() { this.isOpen = false; this.panel.classList.remove('show'); this.icon.classList.remove('open'); }
+  open() { if (this.o.ui) return; this.isOpen = true; this.orient(); this.panel.classList.add('show'); this.icon.classList.add('open'); }
+  close() { if (this.o.ui) return; this.isOpen = false; this.panel.classList.remove('show'); this.icon.classList.remove('open'); }
   toggle() { this.isOpen ? this.close() : this.open(); }
   show(on = true) {
     this.hidden = !on;
-    this.el.style.display = on && this.sections.length ? '' : 'none';
+    this.setVisible(!!(on && this.sections.length));
     if (!on) this.close(); else this.place();
   }
 
@@ -247,7 +283,7 @@ export class OverlayLegend {
     try { this.sections = (await this.host.legendData()) || []; }
     catch (e) { console.warn('[legend] could not read the layers:', e); this.sections = []; }
     this.render();
-    this.el.style.display = this.sections.length && !this.hidden ? '' : 'none';
+    this.setVisible(!!(this.sections.length && !this.hidden));
     if (!this.sections.length) { console.info('[legend] no layer files found in the tiles overlays folder; icon hidden'); return; }
     if (this.o.restore && !this.restored) {
       this.restored = true;
@@ -366,6 +402,6 @@ export class OverlayLegend {
     document.removeEventListener('pointerdown', this.onDocDown);
     document.removeEventListener('keydown', this.onDocKey);
     window.removeEventListener('resize', this.onResize);
-    this.el?.remove();
+    if (this.handle) { this.o.ui.removePanel(this.o.panelId); this.handle = null; } else this.el?.remove();
   }
 }
