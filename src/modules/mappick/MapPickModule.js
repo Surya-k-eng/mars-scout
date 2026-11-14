@@ -1500,6 +1500,11 @@ export class MapPickModule extends Module {
       <div>${dot('#ff3030')}Selected points</div>
       <div>${bar('#39ff88')}Planned route (painted into the terrain)</div>
       <div>${bar('#ffd23f')}Straight line (reference)</div>`;
+        const wb = document.createElement('button');
+        wb.textContent = 'Weather along this route';
+        wb.style.cssText = 'margin-top:8px;width:100%;padding:6px;cursor:pointer';
+        wb.onclick = () => this.ctx.bus.emit('weather:open', { route: true });
+        body.appendChild(wb);
       },
     });
     this.panel = this.routePanel.root;

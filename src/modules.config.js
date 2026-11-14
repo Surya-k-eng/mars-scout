@@ -9,6 +9,7 @@ import { MineralPickModule } from './modules/mappick/MineralPickModule.js';
 import { MineralSearchModule } from './modules/mappick/MineralSearchModule.js';
 import { UIModule } from './modules/ui/UIModule.js';
 import { HawkModule } from './modules/character/HawkModule.js';
+import { WeatherPageModule } from './modules/weather/WeatherPage.js';
 
 export default [
   WorldModule,
@@ -19,5 +20,6 @@ export default [
   MineralPickModule,
   MineralSearchModule,
   UIModule,
+  WeatherPageModule,
   HawkModule,
 ];
