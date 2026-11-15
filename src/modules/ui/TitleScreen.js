@@ -697,15 +697,9 @@ const TITLE_HTML = `
   <h2 class="pg-title">Choose your path</h2>
   <p class="pg-sub">Pick how you want to explore Mars.</p>
   <div class="pg-grid">
-    <button class="ttl-card" id="mars-coordinates">
-      <span class="ttl-ico">${ICON.search}</span>
-      <span class="ttl-tx"><span class="ttl-ct">Search by coordinates</span><span class="ttl-cd">Enter a latitude and longitude on Mars</span></span>
-      <span class="ttl-more">Open <i>›</i></span>
-      <img class="ttl-bg" src="/ui/search_by_mineral.jpeg" alt="" loading="lazy" draggable="false">
-    </button>
     <button class="ttl-card" id="mars-landmarks">
       <span class="ttl-ico">${ICON.pin}</span>
-      <span class="ttl-tx"><span class="ttl-ct">Search by landmarks</span><span class="ttl-cd">Jump to named craters, volcanoes and canyons</span></span>
+      <span class="ttl-tx"><span class="ttl-ct">Route search</span><span class="ttl-cd">Jump to named craters, volcanoes and canyons</span></span>
       <span class="ttl-more">Open <i>›</i></span>
       <img class="ttl-bg" src="/ui/search_by_landmark.jpeg" alt="" loading="lazy" draggable="false">
     </button>
@@ -719,6 +713,7 @@ const TITLE_HTML = `
       <span class="ttl-ico">${ICON.target}</span>
       <span class="ttl-tx"><span class="ttl-ct">Build potential</span><span class="ttl-cd">Find flat ground where a building can be placed</span></span>
       <span class="ttl-more">Open <i>›</i></span>
+      <img class="ttl-bg" src="/ui/search_by_mineral.jpeg" alt="" loading="lazy" draggable="false">
     </button>
   </div>
 </div>
@@ -1091,7 +1086,6 @@ export class TitleScreenModule extends Module {
       on('#mars-settings', () => this.showSettings());
       on('#mars-about', () => this.showAbout());
       on('#mars-refs', () => this.showReferences());
-      on('#mars-coordinates', () => this.enterMarsScout('coordinates'));
       on('#mars-landmarks',   () => this.enterMarsScout('landmarks'));
       on('#mars-targets',     () => this.enterMarsScout('targets'));
       on('#mars-build', () => this.ctx.bus.emit('build:open'));
