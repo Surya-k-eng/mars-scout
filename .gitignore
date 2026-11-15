@@ -55,3 +55,8 @@ node_modules/
 dist/
 data-prep/raw/
 crism_data/
+crism_mosaic.tif
+dtm/
+public/tiles/
+node_modules/
+data-prep/

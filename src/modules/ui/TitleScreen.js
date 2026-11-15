@@ -9,8 +9,8 @@ import { Module } from '../../core/Module.js';
 
    Put these two files in  public/audio/ :   music.mp3   click.wav
 
-   The title backdrop is a slowly spinning, realistic Mars globe built from the SAME global height tiles the
-   map uses (public/tiles/global). Everything for it is in this file (see "GLOBE" below).
+   The title backdrop is a slowly turning 3D block of real HiRISE terrain (public/tiles/regional + hirise, same
+   layers as WorldModule, with the AtmosphereModule sky). It does NOT need public/tiles/global. See "HIRISE TURNTABLE" below.
    ===================================================================== */
 
 const MUSIC_URL = '/audio/music.mp3';
@@ -349,6 +349,201 @@ class GlobeBackdrop {
   }
 }
 
+
+/* =====================================================================
+   HIRISE + REGIONAL TURNTABLE  (replaces the global globe)
+   Same idea as WorldModule: the regional layer is the wide, coarse ground and the HiRISE layer is drawn on top of it
+   where it has data. Colours / slope darkening copy WorldModule; sky, haze and sun copy AtmosphereModule.
+   The pivot is the HiRISE centre, and the whole block slowly turns on a turntable.
+   Same interface as GlobeBackdrop: load(), update(dt, spin), dispose().
+   ===================================================================== */
+const TURN = {
+  layers: ['regional', 'hirise'],   // public/tiles/<name>/ ; later = sharper, drawn on top (a missing one is skipped)
+  gridW: 512,                       // widest height grid per layer (vertices)
+  exag: 3,                          // vertical exaggeration (WorldModule uses 3)
+  spin: 0.10,                       // radians per second
+  startElevation: 0.5,              // camera angle above the ground, radians
+  startRadius: 1.9,                 // camera distance; the HiRISE patch is 2 units wide
+  liveSun: false,                   // true = real Mars sun at the site (can be night); false = bright day, sun direction still real
+  fog: 0.11,                        // haze density (scene units)
+};
+const sstepT = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const CT = (hex) => new THREE.Color(hex);
+// look presets copied from AtmosphereModule
+const SKY = {
+  night: { zenith: CT(0x04060f), horizon: CT(0x1b1b2a), glow: CT(0x4a5a8a), glowStrength: 0.25, fog: CT(0x13141f), sun: CT(0x8995b5), sunLight: CT(0x8f9fd0), sunIntensity: 0.35, hemiSky: CT(0x2a3358), hemiGround: CT(0x15121a), hemiIntensity: 0.35, stars: 1 },
+  sunset: { zenith: CT(0x4a3a47), horizon: CT(0x8f7366), glow: CT(0x7db3ff), glowStrength: 1.9, fog: CT(0x7a6a72), sun: CT(0xcfe2ff), sunLight: CT(0xffa878), sunIntensity: 2.2, hemiSky: CT(0x6f86b0), hemiGround: CT(0x3a2a2a), hemiIntensity: 0.6, stars: 0.08 },
+  day: { zenith: CT(0xb5805d), horizon: CT(0xdcae88), glow: CT(0xffe2bd), glowStrength: 0.8, fog: CT(0xd0a07a), sun: CT(0xffe6c8), sunLight: CT(0xffd9b0), sunIntensity: 2.8, hemiSky: CT(0xd9a27c), hemiGround: CT(0x6a3a2a), hemiIntensity: 0.9, stars: 0 },
+};
+const SKY_COLORS = ['zenith', 'horizon', 'glow', 'fog', 'sun', 'sunLight', 'hemiSky', 'hemiGround'];
+const SKY_NUMS = ['glowStrength', 'sunIntensity', 'hemiIntensity', 'stars'];
+const SKY_STOPS = [{ e: -8, p: 'night' }, { e: 3, p: 'sunset' }, { e: 30, p: 'day' }];
+
+class TerrainBackdrop {
+  constructor(scene, renderer) {
+    this.scene = scene;
+    this.renderer = renderer;
+    this.disposed = false;
+    this.turn = new THREE.Group();               // everything that turns lives in here
+    this.live = {}; for (const k of SKY_COLORS) this.live[k] = new THREE.Color(); for (const k of SKY_NUMS) this.live[k] = 0;
+    this.sunDir = new THREE.Vector3();
+
+    // sky dome (AtmosphereModule): uses only the camera rotation, pinned to the far plane
+    this.skyU = {
+      uZenith: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uGlow: { value: new THREE.Color() },
+      uSun: { value: new THREE.Color() }, uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uGlowStrength: { value: 1 },
+    };
+    this.sky = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24), new THREE.ShaderMaterial({
+      uniforms: this.skyU, side: THREE.BackSide, depthWrite: false, fog: false,
+      vertexShader: `varying vec3 vDir;
+        void main(){ vDir = normalize(position); gl_Position = projectionMatrix * vec4(mat3(viewMatrix) * position, 1.0); gl_Position.z = gl_Position.w; }`,
+      fragmentShader: `uniform vec3 uZenith, uHorizon, uGlow, uSun, uSunDir; uniform float uGlowStrength; varying vec3 vDir;
+        void main(){
+          vec3 d = normalize(vDir); float h = clamp(d.y, 0.0, 1.0);
+          vec3 col = mix(uHorizon, uZenith, pow(h, 0.45));
+          float s = max(dot(d, normalize(uSunDir)), 0.0);
+          float glow = pow(s, 6.0) * 0.35 + pow(s, 40.0) * 0.9 + pow(s, 400.0) * 2.0;
+          col += uGlow * glow * uGlowStrength;
+          col += uSun * smoothstep(0.99988, 0.99994, s) * 3.0;
+          col = mix(col, uHorizon, exp(-h * 14.0) * 0.55);
+          gl_FragColor = vec4(col, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+    }));
+    this.sky.frustumCulled = false; this.sky.renderOrder = -1;
+
+    const n = 1800, pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const th = Math.random() * Math.PI * 2, y = Math.random() * 0.98 + 0.02, r = Math.sqrt(1 - y * y);
+      pos.set([80 * r * Math.cos(th), 80 * y, 80 * r * Math.sin(th)], i * 3);
+    }
+    const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    this.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xdfe6ff, size: 1.5, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false }));
+    this.stars.frustumCulled = false;
+
+    this.hemi = new THREE.HemisphereLight(0xd9a27c, 0x6a3a2a, 0.9);
+    this.sunLight = new THREE.DirectionalLight(0xffd9b0, 2.8);
+    scene.fog = new THREE.FogExp2(0xd0a07a, TURN.fog);
+    scene.add(this.sky, this.stars, this.hemi, this.sunLight, this.turn);
+    this.mats = [];
+    this.sample();                                // look is right from the first frame
+  }
+
+  async load(tilesUrl) {
+    const got = [];
+    for (const name of TURN.layers) {
+      try {
+        const base = `${tilesUrl}${name}/`;
+        const res = await fetch(base + 'index.json');
+        if (!res.ok) throw new Error(`${base}index.json -> HTTP ${res.status}`);
+        const idx = await res.json();
+        const g = await loadHeights(base, idx, Math.min(TURN.gridW, this.renderer.capabilities.maxTextureSize || 4096));
+        got.push({ name, g });
+        console.log(`[terrain] ${name}: level ${g.L}, ${g.cols}x${g.rows}, ${g.got}/${g.tiles} tiles`);
+      } catch (e) { console.info(`[terrain] ${name} skipped:`, e.message); }
+    }
+    if (!got.length) throw new Error('no regional or HiRISE tiles found');
+    if (this.disposed) return;
+    this.build(got);
+  }
+
+  build(got) {
+    const M = D2R_G * RM;                                              // metres per degree (same in x and z, like WorldModule)
+    const fp = ({ lon0, lat0, dl, cols, rows }) => ({ lonMin: lon0, lonMax: lon0 + (cols - 1) * dl, latMax: lat0, latMin: lat0 - (rows - 1) * dl });
+    const ref = got[got.length - 1].g, rf = fp(ref);                   // sharpest layer = pivot and scale
+    const lonC = (rf.lonMin + rf.lonMax) / 2, latC = (rf.latMin + rf.latMax) / 2;
+    const side = Math.max(rf.lonMax - rf.lonMin, rf.latMax - rf.latMin) * M;
+    const sc = 2 / side;                                               // metres -> scene units (sharpest patch = 2 units wide)
+
+    // colour range from the coarsest layer (2nd..98th percentile)
+    const c0 = got[0].g, v = []; for (let i = 0; i < c0.h.length; i += 5) if (c0.h[i] === c0.h[i]) v.push(c0.h[i]);
+    v.sort((a, b) => a - b);
+    const lo = v[Math.floor(v.length * 0.02)] ?? 0, hi = v[Math.floor(v.length * 0.98)] ?? 1, span = Math.max(1, hi - lo);
+    const ky = Math.min(sc * TURN.exag, 3 / span);                     // vertical: never taller than 3 units over the whole range
+
+    got.forEach(({ g }, order) => {
+      const { h, cols, rows, lon0, lat0, dl } = g;
+      const pos = new Float32Array(cols * rows * 3), nor = new Float32Array(cols * rows * 3), col = new Float32Array(cols * rows * 3);
+      const ok = new Uint8Array(cols * rows), tmp = new THREE.Color();
+      const lift = order * 0.004;
+      for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+        const q = j * cols + i, val = h[q];
+        pos[q * 3] = (lon0 + i * dl - lonC) * M * sc;
+        pos[q * 3 + 2] = (latC - (lat0 - j * dl)) * M * sc;
+        if (val !== val) continue;                                      // no data: left out of the index
+        ok[q] = 1;
+        pos[q * 3 + 1] = (val - lo) * ky + lift;
+        // WorldModule ramp: hsl(0.06, 0.45, 0.22..0.57)
+        tmp.setHSL(0.06, 0.45, 0.22 + 0.35 * Math.max(0, Math.min(1, (val - lo) / span)));
+        col[q * 3] = tmp.r; col[q * 3 + 1] = tmp.g; col[q * 3 + 2] = tmp.b;
+      }
+      const idx = [];
+      for (let j = 0; j < rows - 1; j++) for (let i = 0; i < cols - 1; i++) {
+        const a = j * cols + i, b = a + 1, d = a + cols, e = d + 1;
+        if (ok[a] && ok[b] && ok[d] && ok[e]) idx.push(a, d, b, b, d, e);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setIndex(idx);
+      geo.computeVertexNormals();
+      const n = geo.attributes.normal.array;
+      for (let q = 0; q < cols * rows; q++) {                           // steep rock: darker and less orange (WorldModule)
+        if (!ok[q]) continue;
+        const steep = sstepT(0.03, 0.22, 1 - Math.max(0, n[q * 3 + 1])), f = 1 - 0.5 * steep;
+        col[q * 3] *= f; col[q * 3 + 1] *= f * 0.95; col[q * 3 + 2] *= f * 0.90;
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const mat = new THREE.MeshStandardMaterial({
+        vertexColors: true, roughness: 1, side: THREE.DoubleSide,
+        polygonOffset: order > 0, polygonOffsetFactor: -4 * order, polygonOffsetUnits: -4 * order,
+      });
+      this.mats.push(mat);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.frustumCulled = false;
+      this.turn.add(mesh);
+    });
+  }
+
+  // the sky look from the sun's elevation (AtmosphereModule.sample), real sun at the site
+  sample() {
+    const sun = marsSolarState(Date.now(), SITE_LAT, SITE_LON);
+    const elev = TURN.liveSun ? sun.elev : 45, azim = sun.azim ?? 0;
+    let a, b, k;
+    if (elev <= SKY_STOPS[0].e) { a = b = SKY_STOPS[0]; k = 0; }
+    else if (elev >= SKY_STOPS[SKY_STOPS.length - 1].e) { a = b = SKY_STOPS[SKY_STOPS.length - 1]; k = 0; }
+    else { let i = 0; while (elev > SKY_STOPS[i + 1].e) i++; a = SKY_STOPS[i]; b = SKY_STOPS[i + 1]; k = sstepT(0, 1, (elev - a.e) / (b.e - a.e)); }
+    const pa = SKY[a.p], pb = SKY[b.p], s = this.live;
+    for (const c of SKY_COLORS) s[c].copy(pa[c]).lerp(pb[c], k);
+    for (const c of SKY_NUMS) s[c] = pa[c] + (pb[c] - pa[c]) * k;
+    const e = THREE.MathUtils.degToRad(elev), z = THREE.MathUtils.degToRad(azim);
+    this.sunDir.set(Math.cos(e) * Math.sin(z), Math.sin(e), -Math.cos(e) * Math.cos(z));
+    const le = THREE.MathUtils.degToRad(Math.max(elev, 3)), lightDir = new THREE.Vector3(Math.cos(le) * Math.sin(z), Math.sin(le), -Math.cos(le) * Math.cos(z));
+    const u = this.skyU;
+    u.uZenith.value.copy(s.zenith); u.uHorizon.value.copy(s.horizon); u.uGlow.value.copy(s.glow); u.uSun.value.copy(s.sun);
+    u.uSunDir.value.copy(this.sunDir); u.uGlowStrength.value = s.glowStrength;
+    this.scene.fog.color.copy(s.fog);
+    this.sunLight.color.copy(s.sunLight); this.sunLight.intensity = s.sunIntensity; this.sunLight.position.copy(lightDir).multiplyScalar(100);
+    this.hemi.color.copy(s.hemiSky); this.hemi.groundColor.copy(s.hemiGround); this.hemi.intensity = s.hemiIntensity;
+    this.stars.material.opacity = s.stars; this.stars.visible = s.stars > 0.01;
+  }
+
+  update(dt, spin = true) {
+    if (spin) this.turn.rotation.y += TURN.spin * dt;
+    this.sample();
+  }
+
+  dispose() {
+    this.disposed = true;
+    this.scene.remove(this.sky, this.stars, this.hemi, this.sunLight, this.turn);
+    this.scene.fog = null;
+    this.sky.geometry.dispose(); this.sky.material.dispose();
+    this.stars.geometry.dispose(); this.stars.material.dispose();
+    this.turn.traverse((o) => o.geometry?.dispose());
+    this.mats.forEach((m) => m.dispose());
+  }
+}
+
 /* ---------- real Mars sun / sol-time maths (Mars24, Allison & McEwen 2000) ---------- */
 
 const SITE_LAT = 18.48807;   // degrees north
@@ -395,7 +590,11 @@ function marsSolarState(ms, latDeg, lonEastDeg) {
   const sinE = Math.sin(lat) * Math.sin(d) + Math.cos(lat) * Math.cos(d) * Math.cos(H);
   const elev = Math.asin(clamp(sinE, -1, 1)) * R2D;
 
-  return { ls, ltst, elev };
+  const east = -Math.cos(d) * Math.sin(H);
+  const north = Math.sin(d) * Math.cos(lat) - Math.cos(d) * Math.sin(lat) * Math.cos(H);
+  const azim = mod(Math.atan2(east, north) * R2D, 360);
+
+  return { ls, ltst, elev, azim };
 }
 
 const fmtHour = (h) => {
@@ -436,7 +635,7 @@ const TITLE_HTML = `
       <div class="ttl-brand"><i></i>Mars Explorer</div>
       <div class="ttl-pills">
         <div class="ttl-pill"><i class="ttl-dot"></i>Live sol time <b id="mars-top-sol">--:--</b></div>
-        <div class="ttl-pill">Global relief</div>
+        <div class="ttl-pill">HiRISE relief</div>
         <div class="ttl-pill">Dust &amp; haze</div>
       </div>
     </header>
@@ -444,7 +643,7 @@ const TITLE_HTML = `
     <div class="ttl-eyebrow">Interactive terrain</div>
     <h1 class="ttl-title">MARS</h1>
     <p class="ttl-sub">Explore the surface in HiRISE detail</p>
-    <p class="ttl-blurb">A slowly turning relief globe of Mars, built from real elevation data. Drag to look around and scroll to zoom.</p>
+    <p class="ttl-blurb">A slowly turning 3D view of real HiRISE and regional terrain under a Martian sky. Drag to look around and scroll to zoom.</p>
     <div class="ttl-feats"><span>Orbit camera</span><span>Dust &amp; haze</span><span>Free camera</span></div>
 
     <div class="ttl-menu">
@@ -469,6 +668,8 @@ const TITLE_HTML = `
         <span class="ttl-tx"><span class="ttl-ct">References</span><span class="ttl-cd">Data, papers and tools we relied on</span></span>
       </button>
     </div>
+
+
 
     <aside class="ttl-facts" aria-label="Mars fact file">
       <div class="ttl-eyebrow" style="margin:0">Fact file</div>
@@ -513,6 +714,11 @@ const TITLE_HTML = `
       <span class="ttl-tx"><span class="ttl-ct">Search by scientific targets</span><span class="ttl-cd">Explore minerals and sites of scientific interest</span></span>
       <span class="ttl-more">Open <i>›</i></span>
       <img class="ttl-bg" src="/ui/search_by_coordinates.jpeg" alt="" loading="lazy" draggable="false">
+    </button>
+    <button class="ttl-card" id="mars-build">
+      <span class="ttl-ico">${ICON.target}</span>
+      <span class="ttl-tx"><span class="ttl-ct">Build potential</span><span class="ttl-cd">Find flat ground where a building can be placed</span></span>
+      <span class="ttl-more">Open <i>›</i></span>
     </button>
   </div>
 </div>
@@ -888,6 +1094,9 @@ export class TitleScreenModule extends Module {
       on('#mars-coordinates', () => this.enterMarsScout('coordinates'));
       on('#mars-landmarks',   () => this.enterMarsScout('landmarks'));
       on('#mars-targets',     () => this.enterMarsScout('targets'));
+      on('#mars-build', () => this.ctx.bus.emit('build:open'));
+    
+    this.offBuild = this.ctx.bus.on('build:start', () => this.enterMarsScout('build'));
 
     this.overlay.addEventListener('click', (event) => {
       if (event.target === this.overlay) this.closeDialog();
@@ -1081,14 +1290,14 @@ export class TitleScreenModule extends Module {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(GLOBE.fov, 1, 0.01, 200);
 
-    this.globe = new GlobeBackdrop(this.scene, renderer);
-    this.globe.load(TILES_URL).catch((e) => console.warn('[globe] showing the plain ball instead:', e.message));
+    this.globe = new TerrainBackdrop(this.scene, renderer);      // HiRISE turntable (the old global GlobeBackdrop is no longer used)
+    this.globe.load(TILES_URL).catch((e) => console.warn('[terrain] no HiRISE/regional tiles for the title backdrop:', e.message));
 
     // radius is in globe radii (1 = the surface). elevation = camera angle above the equator.
     this.cameraState = {
       theta: 0.6,
-      elevation: GLOBE.startElevation,
-      radius: GLOBE.startRadius,
+      elevation: TURN.startElevation,
+      radius: TURN.startRadius,
       target: new THREE.Vector3(0, 0, 0),
       dragging: false,
       lastX: 0,
@@ -1148,8 +1357,8 @@ export class TitleScreenModule extends Module {
         if (event.target.closest('.ttl-facts, .ttl-panel')) return;
         event.preventDefault();
         state.radius = Math.max(
-          1.15,
-          Math.min(4, state.radius * Math.exp(event.deltaY * 0.001))
+          0.7,
+          Math.min(12, state.radius * Math.exp(event.deltaY * 0.001))
         );
       },
       { passive: false }

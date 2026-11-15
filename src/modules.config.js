@@ -7,9 +7,11 @@ import { MapPickModule } from './modules/mappick/MapPickModule.js';
 import { TitleScreenModule } from './modules/ui/TitleScreen.js';
 import { MineralPickModule } from './modules/mappick/MineralPickModule.js';
 import { MineralSearchModule } from './modules/mappick/MineralSearchModule.js';
-import { UIModule } from './modules/ui/UIModule.js';
+import { UIModule } from './modules/ui/uimodule.js';
 import { HawkModule } from './modules/character/HawkModule.js';
 import { WeatherPageModule } from './modules/weather/WeatherPage.js';
+import { BuildPotentialModule } from './modules/BuildPotentialModule.js';
+
 
 export default [
   WorldModule,
@@ -22,4 +24,6 @@ export default [
   UIModule,
   WeatherPageModule,
   HawkModule,
+  BuildPotentialModule,
+  
 ];

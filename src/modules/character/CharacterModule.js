@@ -46,6 +46,7 @@ export class CharacterModule extends Module {
     this.yaw = 0; this.pitch = 0;
     this.snap = true;                         // next ground height is applied instantly
     this.busy = false;
+    this.worldFrames = 0;                     // frames rendered in 'world' mode (used to hide the loading overlay)
     this.route = null; this.routeSrc = null;  // planned route from MapPickModule (state 'route')
     this.following = false; this.paused = false; this.routeS = 0;
     this.last = performance.now();
@@ -88,18 +89,38 @@ export class CharacterModule extends Module {
     const r = this.ctx.renderer;
     this.prevRender = r.render;
     const prev = this.prevRender.bind(r);
-    this.wrapper = (scene, camera) => {
+    // render the map camera with the fog setting it always had (no fog unless MAIN_CAM_FOG)
+    const renderMap = (scene, camera, fn) => {
       const fog = scene.fog, dens = fog?.density;
+      if (fog && !MAIN_CAM_FOG) fog.density = 0;
+      try { fn(); } finally { if (fog) fog.density = dens; }
+    };
+    this.wrapper = (scene, camera) => {
       const isMain = camera === this.ctx.camera;
-      if (fog && isMain && !MAIN_CAM_FOG) fog.density = 0;   // main view: no fog
-      prev(scene, camera);
-      if (fog) fog.density = dens;                           // restore for Astro's view
-      if (this.busy || !this.alive || !isMain) return;
+      if (this.busy || !this.alive || !isMain) {            // any other camera: unchanged behaviour
+        const fog = scene.fog, dens = fog?.density;
+        if (fog && isMain && !MAIN_CAM_FOG) fog.density = 0;
+        prev(scene, camera);
+        if (fog) fog.density = dens;
+        return;
+      }
       this.busy = true;
       try {
         camera.layers.enable(BODY_LAYER);
-        this.update();
-        this.drawInset(prev, scene);
+        if (this.ctx.state.get('mode') === 'world') {
+          // after the two points are picked: Astro's camera is the full screen, the map shrinks into the corner
+          this.update();
+          this.drawFull(prev, scene);
+          renderMap(scene, camera, () => this.drawMini(prev, scene, camera));
+          // hide the loading overlay once Astro's view has rendered a few frames with ground under him
+          if (this.worldFrames < 30 && this.snap === false && ++this.worldFrames >= 30) this.ctx.ui?.loading?.(null);
+        } else {
+          this.worldFrames = 0;
+          // picking stage: the map is the full screen and Astro's inset is hidden
+          renderMap(scene, camera, () => prev(scene, camera));
+          this.update();                                     // still runs, so Astro's camera stays registered with the terrain
+          this.hideMini();
+        }
       } finally {
         this.busy = false;
       }
@@ -314,7 +335,25 @@ export class CharacterModule extends Module {
     this.cam.rotation.set(this.pitch, this.yaw, 0);
   }
 
-  drawInset(render, scene) {
+  // Astro's camera over the whole canvas (used once the route is picked).
+  drawFull(render, scene) {
+    const r = this.ctx.renderer;
+    const size = r.getSize(new THREE.Vector2());
+    this.cam.aspect = size.x / size.y;
+    this.cam.userData.viewHeight = size.y * r.getPixelRatio();   // true size of his screen, so far mountains aren't over-detailed
+    this.cam.updateProjectionMatrix();
+    render(scene, this.cam);
+  }
+
+  // picking stage: no inset, and the right dock goes back to the top
+  hideMini() {
+    if (this.frame) this.frame.style.display = 'none';
+    this.ctx.miniRect = null;
+    this.ctx.ui?.reserve?.('right', 'astroCam', 0);
+  }
+
+  // The map camera in the top-right corner (same size / position the Astro inset used to have).
+  drawMini(render, scene, cam) {
     const r = this.ctx.renderer;
     const size = r.getSize(new THREE.Vector2());
     const w = Math.min(INSET_W, size.x * 0.4), h = Math.round((w * INSET_H) / INSET_W);
@@ -324,15 +363,17 @@ export class CharacterModule extends Module {
     const sc = r.getScissor(new THREE.Vector4());
     const st = r.getScissorTest();
     const ac = r.autoClear;
+    const oldAspect = cam.aspect;
 
     r.setScissorTest(true);
     r.setViewport(x, y, w, h);
     r.setScissor(x, y, w, h);
     r.autoClear = true;
-    this.cam.aspect = w / h;
-    this.cam.userData.viewHeight = h * r.getPixelRatio();   // true size of his screen, so far mountains aren't over-detailed
-    this.cam.updateProjectionMatrix();
-    render(scene, this.cam);
+    cam.aspect = w / h;
+    cam.updateProjectionMatrix();
+    render(scene, cam);
+    cam.aspect = oldAspect;                                  // give the map camera its own aspect back
+    cam.updateProjectionMatrix();
 
     r.setViewport(vp);
     r.setScissor(sc);
@@ -341,15 +382,17 @@ export class CharacterModule extends Module {
 
     const rect = r.domElement.getBoundingClientRect();
     const s = this.frame.style;
+    this.ctx.miniRect = { left: rect.right - w - MARGIN, top: rect.top + MARGIN, width: w, height: h };   // MapPickModule pans / zooms inside this box
+    s.display = '';
     s.left = `${rect.right - w - MARGIN}px`;
     s.top = `${rect.top + MARGIN}px`;
     s.width = `${w}px`;
     s.height = `${h}px`;
     this.updateCoords();
-    this.ctx.ui?.reserve?.('right', 'astroCam', rect.top + MARGIN + h + 6);   // right dock starts below the Astro cam
-    this.label.textContent = !this.enabled ? 'ASTRO CAM  paused (C = on)'
-      : this.following ? `ASTRO CAM  on route ${Math.round((this.routeS / this.route.total) * 100)}%  (P = ${this.paused ? 'resume' : 'pause'}, WASD = manual)`
-      : this.route ? 'ASTRO CAM  (F = walk route again, C = off)' : 'ASTRO CAM  (C = off)';
+    this.ctx.ui?.reserve?.('right', 'astroCam', rect.top + MARGIN + h + 6);   // right dock starts below the minimap
+    this.label.textContent = !this.enabled ? 'MAP  Astro paused (C = on)'
+      : this.following ? `MAP  Astro on route ${Math.round((this.routeS / this.route.total) * 100)}%  (P = ${this.paused ? 'resume' : 'pause'}, WASD = manual)`
+      : this.route ? 'MAP  (F = walk route again, C = off)' : 'MAP  (C = off)';
   }
 
   // ---- UI WIRING: the only place this module creates DOM -----------------------------------------------------
@@ -372,7 +415,7 @@ export class CharacterModule extends Module {
 
     // speed buttons  [ - ]  Speed x1  [ + ]  and the coordinates readout, as one panel under the Astro cam
     this.astroPanel = ui.addPanel({
-      id: 'astro', title: 'Astro', dock: 'right',
+      id: 'astro', title: 'Astro', dock: 'right', visibleWhen: { mode: 'world' },
       build: (body) => {
         const el = (tag, parent, text, cls) => {
           const n = document.createElement(tag);
@@ -435,6 +478,7 @@ export class CharacterModule extends Module {
     window.removeEventListener('keyup', this.onKey);
     window.removeEventListener('blur', this.onBlur);
     this.frame?.remove();
+    this.ctx.miniRect = null;
     this.ctx.camera?.layers.disable(BODY_LAYER);
     if (this.group) this.ctx.scene.remove(this.group);
     for (const g of this.geos || []) g.dispose();

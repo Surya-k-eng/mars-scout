@@ -54,6 +54,11 @@ const CSS = `
 .ui-item{display:flex;align-items:center;gap:6px;padding:4px 2px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.07)}
 .ui-item:hover{background:rgba(255,255,255,.08)}
 .ui-item.sel{background:rgba(255,213,74,.18)}
+.ui-loading{position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;
+  background:rgba(8,10,14,.72);color:#fff;font:600 15px system-ui,sans-serif;pointer-events:none}
+.ui-loading.on{display:flex}
+.ui-spin{width:38px;height:38px;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:ui-spin 1s linear infinite}
+@keyframes ui-spin{to{transform:rotate(360deg)}}
 `;
 
 // DOM helper (no `this`, so modules can destructure it: const { el } = ctx.ui)
@@ -82,6 +87,9 @@ export class UIModule extends Module {
     };
     const off = this.ctx.bus?.on?.('search:mode', (m) => { this.mode = m; this.applyVisibility(); });
     this._offMode = typeof off === 'function' ? off : null;
+    // 'mode:change' is emitted by whoever sets state 'mode' (map -> world); panels using visibleWhen: { mode: ... } re-check
+    const offM = this.ctx.bus?.on?.('mode:change', () => this.applyVisibility());
+    this._offMode2 = typeof offM === 'function' ? offM : null;
     this.ctx.ui = this;
   }
 
@@ -134,6 +142,23 @@ export class UIModule extends Module {
     return c;
   }
 
+  // Full-screen "working..." overlay. ui.loading('text') shows it, ui.loading(null) hides it.
+  // Safety net: it hides itself after 20 s so a failed step can never leave the screen covered.
+  loading(text) {
+    if (!this._load) {
+      const d = el('div', document.body, undefined, 'ui-loading');
+      el('div', d, undefined, 'ui-spin');
+      this._loadTxt = el('div', d);
+      (this.tips ||= new Set()).add(d);
+      this._load = d;
+    }
+    clearTimeout(this._loadTimer);
+    if (text == null) { this._load.classList.remove('on'); return; }
+    this._loadTxt.textContent = text;
+    this._load.classList.add('on');
+    this._loadTimer = setTimeout(() => this._load?.classList.remove('on'), 20000);
+  }
+
   tooltip() {
     const t = el('div', document.body, undefined, 'ui-tip');
     (this.tips ||= new Set()).add(t);
@@ -162,6 +187,8 @@ export class UIModule extends Module {
 
   dispose() {
     try { this._offMode?.(); } catch { /* ignore */ }
+    try { this._offMode2?.(); } catch { /* ignore */ }
+    clearTimeout(this._loadTimer);
     for (const id of [...this.panels.keys()]) this.removePanel(id);
     this.tips?.forEach((t) => t.remove());
     this.docks?.left.remove();

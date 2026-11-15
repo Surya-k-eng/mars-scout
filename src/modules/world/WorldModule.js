@@ -145,7 +145,7 @@ if (uOvAmount > 0.0) {
 
 const TILES = (import.meta.env.VITE_TILES_URL ?? `${import.meta.env.BASE_URL}tiles/`).replace(/\/?$/, '/');
 const LAYERS = [                    // later entries are sharper and win where they have data
-  { name: 'Global', path: 'global' },
+  { name: 'regional', path: 'regional' },
   { name: 'HiRISE DTM', path: 'hirise' },
 ];
 

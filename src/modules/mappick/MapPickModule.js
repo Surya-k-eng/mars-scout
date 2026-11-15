@@ -1,5 +1,7 @@
+
 import * as THREE from 'three';
 import { Module } from '../../core/Module.js';
+import { MineralField, MINERAL_PRESETS } from './MineralField.js';   // CRISM mineral overlays (new)
 
 // Map pick + route planning in ONE module.
 // 1. Top-down map view at launch. Drag = pan, wheel = zoom, click two points (Esc = skip).
@@ -60,6 +62,21 @@ const PLAN = {
   color: 0x39ff88,
   pathWidthM: 10,       // width of the path painted INTO the terrain, in world units (metres)
   maskSize: 4096,       // resolution of the path mask texture (longest side, pixels)
+
+  // ---- CRISM mineral factor (A*) ----
+  mineralOn: true,      // use the mineral score in the main route
+  mineralPull: 0.5,     // 0..0.9: a cell with score 1 costs (1 - pull) x normal. Slope / sideways-slope LIMITS stay hard.
+  mineralPreset: 'hydrated',   // key of MINERAL_PRESETS loaded at start
+  // ---- mineral tour (separate route through hotspots) ----
+  tourOn: true,
+  tourPad: 0.9,         // tour search window = pin box padded by this fraction of the pin distance (wider than the main route)
+  tourPull: 0.5,        // mineral pull used on the legs between hotspots
+  tourMaxStops: 6,      // most hotspots visited
+  tourBudget: 2.5,      // the straight-line length of A -> stops -> B may be at most this many times the A-B distance
+  hotspotMin: 0.45,     // smoothed mineral score (0..1) a cell needs to count as a hotspot
+  hotspotRadiusM: 600,  // score is averaged over this radius, so a hotspot is a cluster and not a single noisy pixel
+  hotspotSepM: 2500,    // hotspots are at least this far apart
+  tourColor: 0x38d6ff,
 };
 
 class MinHeap {
@@ -144,6 +161,52 @@ function resample(pts, step) {
   return out;
 }
 
+// mean over a (2R+1)^2 box (integral image). Used to smooth the mineral score before looking for hotspots.
+function boxMean(arr, W, H, R) {
+  const SW = W + 1, S = new Float64Array(SW * (H + 1));
+  for (let j = 0; j < H; j++)
+    for (let i = 0; i < W; i++) {
+      const k = (j + 1) * SW + i + 1;
+      S[k] = arr[j * W + i] + S[k - 1] + S[k - SW] - S[k - SW - 1];
+    }
+  const out = new Float32Array(W * H);
+  for (let j = 0; j < H; j++)
+    for (let i = 0; i < W; i++) {
+      const ia = Math.max(0, i - R), ib = Math.min(W, i + R + 1), ja = Math.max(0, j - R), jb = Math.min(H, j + R + 1);
+      const sum = S[jb * SW + ib] - S[ja * SW + ib] - S[jb * SW + ia] + S[ja * SW + ia];
+      out[j * W + i] = sum / ((ib - ia) * (jb - ja));
+    }
+  return out;
+}
+
+// Visit order for the tour: nearest-neighbour from A, then 2-opt, with A first and B last (open path).
+// Lengths here are straight-line; the real route is then planned leg by leg with A*.
+function orderStops(A, B, stops) {
+  const dist = (p, q) => Math.hypot(p.x - q.x, p.z - q.z);
+  const rest = stops.slice(), seq = [];
+  let cur = A;
+  while (rest.length) {
+    let bi = 0, bd = Infinity;
+    rest.forEach((s, i) => { const d = dist(s, cur); if (d < bd) { bd = d; bi = i; } });
+    cur = rest.splice(bi, 1)[0];
+    seq.push(cur);
+  }
+  const P = [A, ...seq, B];
+  for (let improved = true, guard = 0; improved && guard < 50; guard++) {
+    improved = false;
+    for (let i = 1; i < P.length - 2; i++)
+      for (let k = i + 1; k < P.length - 1; k++) {
+        if (dist(P[i - 1], P[k]) + dist(P[i], P[k + 1]) < dist(P[i - 1], P[i]) + dist(P[k], P[k + 1]) - 1e-6) {
+          for (let a = i, b = k; a < b; a++, b--) [P[a], P[b]] = [P[b], P[a]];
+          improved = true;
+        }
+      }
+  }
+  let length = 0;
+  for (let i = 1; i < P.length; i++) length += dist(P[i - 1], P[i]);
+  return { seq: P.slice(1, -1), length };
+}
+
 // The terrain material can only be patched once, and MineralPickModule extends this class, so both instances share
 // the patch marker and ONE set of uniform objects. A route is shown by changing their values, never by replacing them
 // (already-compiled materials keep pointing at these exact objects).
@@ -152,6 +215,7 @@ const ROUTE_U = {
   uRouteMask: { value: null },
   uRouteBox: { value: new THREE.Vector4() },
   uRouteColor: { value: new THREE.Color(PLAN.color) },
+  uRouteColor2: { value: new THREE.Color(PLAN.tourColor) },   // mineral tour (mask green channel)
   uRouteOn: { value: 0 },
 };
 
@@ -259,6 +323,7 @@ export class MapPickModule extends Module {
     else console.warn('[mappick] state "atmosphere" has no setMapPickMode(): fog is switched off here instead');
     this.picks = [];
     this.ctx.state.set('mode', 'map');
+    this.ctx.bus?.emit?.('mode:change');
     this.makeHud();
 
     // preview line (follows the cursor after the first click)
@@ -271,6 +336,13 @@ export class MapPickModule extends Module {
     this.markers.add(this.line);
 
     this.drag = null;
+    // After picking, CharacterModule draws this map in a corner and publishes that box (CSS px) as ctx.miniRect.
+    // Pan / zoom keep working there, using the box instead of the whole canvas.
+    this.isMapMode = () => this.ctx.state.get('mode') === 'map';
+    this.inMini = (e) => {
+      const m = this.ctx.miniRect;
+      return !!m && e.clientX >= m.left && e.clientX <= m.left + m.width && e.clientY >= m.top && e.clientY <= m.top + m.height;
+    };
     this.onDown = (e) => { if (!this.busy && e.button === 0) this.drag = { x: e.clientX, y: e.clientY, moved: 0 }; };
     this.onMove = (e) => {
       if (this.busy) return;
@@ -278,7 +350,8 @@ export class MapPickModule extends Module {
         const dx = e.clientX - this.drag.x, dy = e.clientY - this.drag.y;
         this.drag.x = e.clientX; this.drag.y = e.clientY;
         this.drag.moved += Math.abs(dx) + Math.abs(dy);
-        const mpp = (2 * cam.position.y * Math.tan(THREE.MathUtils.degToRad(cam.fov ?? 50) / 2)) / el.clientHeight;
+        const viewH = this.isMapMode() ? el.clientHeight : (this.ctx.miniRect?.height || el.clientHeight);   // minimap: its own height
+        const mpp = (2 * cam.position.y * Math.tan(THREE.MathUtils.degToRad(cam.fov ?? 50) / 2)) / viewH;
         cam.position.x = THREE.MathUtils.clamp(cam.position.x - dx * mpp * PAN_SPEED, this.rect.x0, this.rect.x1);
         cam.position.z = THREE.MathUtils.clamp(cam.position.z - dy * mpp * PAN_SPEED, this.rect.z0, this.rect.z1);
       } else if (this.active && this.picks.length === 1) {
@@ -297,11 +370,13 @@ export class MapPickModule extends Module {
       const h0 = cam.position.y;
       const h1 = THREE.MathUtils.clamp(h0 * (e.deltaY > 0 ? ZOOM_SPEED : 1 / ZOOM_SPEED), MIN_HEIGHT, this.hMax);
       // zoom toward the mouse: the ground point under the cursor stays under the cursor
-      const r = el.getBoundingClientRect();
+      const mini = this.isMapMode() ? null : this.ctx.miniRect;        // minimap: zoom around the cursor inside its box
+      const r = mini || el.getBoundingClientRect();
+      const aspect = mini ? mini.width / mini.height : cam.aspect;
       const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
       const ny = -((e.clientY - r.top) / r.height) * 2 + 1;
       const k = Math.tan(THREE.MathUtils.degToRad(cam.fov ?? 50) / 2);
-      cam.position.x = THREE.MathUtils.clamp(cam.position.x + nx * k * cam.aspect * (h0 - h1), this.rect.x0, this.rect.x1);
+      cam.position.x = THREE.MathUtils.clamp(cam.position.x + nx * k * aspect * (h0 - h1), this.rect.x0, this.rect.x1);
       cam.position.z = THREE.MathUtils.clamp(cam.position.z + ny * k * (h1 - h0), this.rect.z0, this.rect.z1);
       cam.position.y = h1;
     };
@@ -311,11 +386,13 @@ export class MapPickModule extends Module {
     // (orbit / tilt / right-drag rotate / ctrl-drag) can react while the map is being picked.
     this.onDownCap = (e) => {
       if (e.target !== el) return;
+      if (!this.isMapMode() && !this.inMini(e)) return;   // after picking: only the corner minimap reacts (pan)
       e.stopPropagation();
       this.onDown(e);
     };
     this.onWheelCap = (e) => {
       if (e.target !== el) return;
+      if (!this.isMapMode() && !this.inMini(e)) return;   // wheel / touchpad pinch over the minimap = zoom
       e.stopPropagation();
       this.onWheel(e);
     };
@@ -354,7 +431,7 @@ export class MapPickModule extends Module {
       this.tip.style.top = `${Math.min(cy + 16, innerHeight - h - 4)}px`;
     };
     this.onTipMove = (e) => {
-      if (this.busy) { this.hideTip(); return; }
+      if (this.busy || this.ctx.state.get('mode') !== 'map') { this.hideTip(); return; }
       if (this.drag) {                       // dragging: follow the cursor continuously
         clearTimeout(this.tipTimer); this.tipTimer = null;
         this.showTip(e.clientX, e.clientY);
@@ -373,6 +450,8 @@ export class MapPickModule extends Module {
 
     this.showFeat = true;
     this.makeFeatureUI();
+    this.makeMineralUI();
+    this.initMineral();
 
     // Every frame: keep the camera looking straight down (no tilt, no rotation) and the controls off.
     const lock = () => {
@@ -424,9 +503,9 @@ export class MapPickModule extends Module {
   }
 
   // Pin built at unit size (pole 6 tall, cone on top, ring on the ground); scaled by the caller.
-  makePin(x, y, z) {
+  makePin(x, y, z, color = 0xff3030) {
     // depthTest off + high renderOrder = the pin is drawn over the route and the terrain
-    const onTop = { color: 0xff3030, transparent: true, depthTest: false, depthWrite: false };
+    const onTop = { color, transparent: true, depthTest: false, depthWrite: false };
     const mat = new THREE.MeshBasicMaterial(onTop);
     const g = new THREE.Group();
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 6, 8), mat);
@@ -463,6 +542,7 @@ export class MapPickModule extends Module {
       // Show the second pin FIRST. Route planning blocks the main thread, so wait for a couple of
       // rendered frames before starting it; otherwise the pin only appears once everything is done.
       this.busy = true;
+      this.ctx.ui?.loading?.('Planning route…');
       this.updateHud();
       requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
         if (this.active) this.finish();
@@ -472,7 +552,9 @@ export class MapPickModule extends Module {
     }
   }
 
-  finish() {
+  async finish() {
+    if (this.mineralBusy) { try { await this.mineralBusy; } catch (e) { /* planRoute then runs without minerals */ } }
+    if (!this.active) return;
     const [a, b] = this.picks;
     const midLon = (a.lon + b.lon) / 2, midLat = (a.lat + b.lat) / 2;
 
@@ -500,6 +582,7 @@ export class MapPickModule extends Module {
 
     this.planRoute(area);   // route planning runs right here, no separate module
     this.drawStraight(area.a, area.b);
+    this.ctx.ui?.loading?.('Loading terrain along the route…');   // CharacterModule hides it once Astro's view has rendered
     this.exit(false);
   }
 
@@ -562,7 +645,7 @@ export class MapPickModule extends Module {
 
     const dot = (c) => `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;border:2px solid ${c};margin:0 4px 0 8px;vertical-align:middle"></span>`;
     this.featPanel = this.ctx.ui.addPanel({
-      id: 'mapFeatures', title: 'Map features', dock: 'right',
+      id: 'mapFeatures', title: 'Map features', dock: 'right', visibleWhen: { mode: 'map' },
       build: (body, ui) => {
         const btn = ui.el('label', body, undefined, undefined);
         btn.style.cssText = 'cursor:pointer;user-select:none;font-weight:600';
@@ -583,8 +666,78 @@ export class MapPickModule extends Module {
 
   removeFeatureUI() {
     this.featCv?.remove(); this.featCv = null;
+    this.ctx.ui?.removePanel('mineralFactor'); this.mineralPanel = null; this.minMsg = null;
     this.ctx.ui?.removePanel('mapFeatures'); this.featPanel = null; this.featBox = null; this.featMsg = null; this.featCnt = null; this.featCount = -1;
     this.featHits = [];
+  }
+
+  // ===================== CRISM minerals (UI + loading) =====================
+
+  async initMineral() {
+    if (this.mineral || !this.terrain) return;
+    this.mineral = new MineralField(this.terrain);
+    this.mineralBusy = this.mineral.init()
+      .then(() => this.setMineralPreset(PLAN.mineralPreset))
+      .catch((e) => { console.warn('[mappick] minerals unavailable:', e); this.setMineralStatus(`Minerals unavailable: ${String(e.message).slice(0, 80)}`, true); });
+  }
+
+  setMineralPreset(key) {
+    const p = MINERAL_PRESETS[key];
+    if (!p || !this.mineral) return Promise.resolve();
+    PLAN.mineralPreset = key;
+    this.setMineralStatus('Loading CRISM layers…');
+    const job = this.mineral.setLayers(p.layers).then(() => {
+      if (this.mineralBusy !== job) return;                            // a newer preset was chosen meanwhile
+      const m = this.mineral.missing.length ? ` (${this.mineral.missing.length} PNG missing)` : '';
+      this.setMineralStatus(`${this.mineral.names.length} layers ready${m}`);
+    }).catch((e) => { this.setMineralStatus(String(e.message).slice(0, 90), true); throw e; });
+    this.mineralBusy = job;
+    return job;
+  }
+
+  setMineralStatus(text, bad = false) {
+    this.minStatus = text;
+    if (this.minMsg) { this.minMsg.textContent = text; this.minMsg.style.color = bad ? '#ffb4b4' : '#b6f0b6'; }
+  }
+
+  // UI WIRING: right-dock panel (same pattern as makeFeatureUI). Writes straight into PLAN, which planRoute() reads.
+  makeMineralUI() {
+    this.mineralPanel = this.ctx.ui.addPanel({
+      id: 'mineralFactor', title: 'CRISM minerals', dock: 'right', visibleWhen: { mode: 'map' },
+      build: (body, ui) => {
+        const chk = (label, val, fn) => {
+          const l = ui.el('label', body); l.style.cssText = 'display:block;cursor:pointer;user-select:none;margin:2px 0';
+          const c = document.createElement('input'); c.type = 'checkbox'; c.checked = !!val; c.onchange = () => fn(c.checked);
+          l.append(c, ' ' + label); return c;
+        };
+        chk('Mineral factor in route (A*)', PLAN.mineralOn, (v) => { PLAN.mineralOn = v; });
+
+        const pl = ui.el('div', body); pl.style.marginTop = '4px';
+        const pv = document.createElement('span');
+        const r = document.createElement('input');
+        r.type = 'range'; r.min = '0'; r.max = '90'; r.step = '5'; r.value = String(Math.round(PLAN.mineralPull * 100)); r.style.width = '100%';
+        const show = () => { pv.textContent = `${r.value}%`; };
+        r.oninput = () => { PLAN.mineralPull = r.value / 100; show(); };
+        pl.append('Mineral pull ', pv, r); show();
+
+        const sel = document.createElement('select');
+        sel.style.cssText = 'width:100%;margin:4px 0;padding:4px';
+        for (const [k, p] of Object.entries(MINERAL_PRESETS)) sel.add(new Option(p.label, k, false, k === PLAN.mineralPreset));
+        sel.onchange = () => this.setMineralPreset(sel.value);
+        body.appendChild(sel);
+
+        chk('Also plan a mineral tour (hotspots)', PLAN.tourOn, (v) => { PLAN.tourOn = v; });
+        const st = ui.el('div', body); st.style.marginTop = '4px';
+        const n = document.createElement('input');
+        n.type = 'number'; n.min = '1'; n.max = '12'; n.value = String(PLAN.tourMaxStops); n.style.cssText = 'width:48px;margin-left:4px';
+        n.addEventListener('keydown', (e) => e.stopPropagation());
+        n.onchange = () => { PLAN.tourMaxStops = Math.max(1, Math.min(12, parseInt(n.value, 10) || PLAN.tourMaxStops)); };
+        st.append('Max hotspots', n);
+
+        this.minMsg = ui.el('div', body); this.minMsg.style.cssText = 'font-size:11px;margin-top:4px';
+        this.setMineralStatus(this.minStatus || '');
+      },
+    });
   }
 
   // The Astro Cam inset is created by another module, so find it in the page by its label / id / class.
@@ -678,6 +831,7 @@ export class MapPickModule extends Module {
     g.clearRect(0, 0, w, h);
     this.featHits = [];
     this.featOrigin = { left: r.left, top: r.top };
+    if (this.ctx.state.get('mode') !== 'map') return;   // minimap: no labels drawn over the (now corner) map
     if (!this.showFeat || !this.features || !this.terrain) return;
     const blocked = this.blockedRects();
 
@@ -813,6 +967,7 @@ export class MapPickModule extends Module {
       this.active = false;
       this.busy = false;
       this.ctx.state.set('mode', 'world');
+      this.ctx.bus?.emit?.('mode:change');
       return;
     }
     this.flatView = false;
@@ -849,6 +1004,7 @@ export class MapPickModule extends Module {
     this.busy = false;
     if (OWNER === this) OWNER = null;
     this.ctx.state.set('mode', 'world');
+    this.ctx.bus?.emit?.('mode:change');
   }
 
   clearMarkers() {
@@ -868,7 +1024,7 @@ export class MapPickModule extends Module {
       const cam = this.ctx.camera;
       const hpx = Math.max(1, this.ctx.renderer.domElement.clientHeight);
       const perPx = 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov ?? 50) / 2) / hpx;
-      for (const c of this.markers.children) {
+      for (const c of [...this.markers.children, ...this.routeGroup.children]) {   // hotspot pins live in routeGroup
         if (!c.userData.isPin) continue;
         c.getWorldPosition(v);
         c.scale.setScalar(Math.max(1e-3, v.distanceTo(cam.position) * perPx * PIN_PX / PIN_UNIT_H));
@@ -899,12 +1055,59 @@ export class MapPickModule extends Module {
   // ===================== route planning =====================
 
   planRoute(area) {
-    const terrain = this.terrain;
     const A = area.a, B = area.b;
     const straight = Math.hypot(B.x - A.x, B.z - A.z);
 
-    // search window
-    const pad = straight * PLAN.padFactor;
+    const G = this.buildGrid(A, B, PLAN.padFactor);
+    if (!G) return console.warn('[mappick] pin outside terrain data');
+    const haveMin = !!this.mineral?.ready;
+    const useMin = PLAN.mineralOn && haveMin;
+    if (useMin) this.mineralGrid(G);
+    const pull = useMin ? PLAN.mineralPull : 0;
+
+    const res = this.astar(G, G.si, G.gi, pull);
+    if (!res) return console.warn('[mappick] no route under any slope limit');
+    if (res.limit > PLAN.maxSlopeDeg) console.warn(`[mappick] no route at ${PLAN.maxSlopeDeg} deg, used ${res.limit} deg`);
+
+    // smooth in x/z (ends pinned exactly on the pins), resample, drape on the real surface
+    const main = this.finishPath(G, this.legPoints(G, res.idxs, A, B));
+    const maxSlope = this.rawMaxSlope(G, res.idxs);
+
+    // how mineral-rich is the route compared with just driving straight? (shown in the info panel)
+    let minStats = null;
+    if (haveMin) {
+      const line = [];
+      for (let i = 0; i <= 64; i++) line.push({ x: A.x + (B.x - A.x) * i / 64, z: A.z + (B.z - A.z) * i / 64 });
+      minStats = { route: this.meanMineral(main.pts), straight: this.meanMineral(line), used: useMin, pull };
+    }
+
+    let tour = null;
+    if (PLAN.tourOn && haveMin) {
+      try { tour = this.planTour(area, straight); } catch (e) { console.warn('[mappick] mineral tour failed:', e); }
+    }
+
+    this.drawRoute(main.lifted, tour?.lifted);
+    if (tour) for (const s of tour.stops) {
+      const pin = this.makePin(s.x, (this.groundAt(s.x, s.z) ?? 0), s.z, PLAN.tourColor);
+      this.routeGroup.add(pin);
+    }
+    this.showPanel({ a: area.a, b: area.b, straight, routeLen: main.routeLen, maxSlope, limit: res.limit, minStats, tour });
+    this.ctx.state.set('route', main.lifted);
+    this.ctx.bus.emit('route:planned', { points: main.lifted, length: main.routeLen, cost: res.cost });
+    if (tour) {
+      this.ctx.state.set('tourRoute', tour.lifted);
+      this.ctx.bus.emit('tour:planned', { points: tour.lifted, length: tour.routeLen, stops: tour.stops });
+    }
+    console.log(`[mappick] route: ${main.lifted.length} points, ${main.routeLen.toFixed(0)} m, cell ${G.cs.toFixed(0)}` +
+      (minStats ? `, mineral ${(minStats.route * 100).toFixed(0)}% vs straight ${(minStats.straight * 100).toFixed(0)}%` : '') +
+      (tour ? `; tour ${tour.routeLen.toFixed(0)} m via ${tour.stops.length} hotspots` : ''));
+  }
+
+  // Search grid around the two pins: heights, local slope, gradient, hill-ness (TPI). null if a pin has no terrain data.
+  buildGrid(A, B, padFactor) {
+    const terrain = this.terrain;
+    const straight = Math.hypot(B.x - A.x, B.z - A.z);
+    const pad = straight * padFactor;
     const x0 = Math.min(A.x, B.x) - pad, x1 = Math.max(A.x, B.x) + pad;
     const z0 = Math.min(A.z, B.z) - pad, z1 = Math.max(A.z, B.z) + pad;
     const cs = Math.max(PLAN.cellSize, Math.max(x1 - x0, z1 - z0) / PLAN.maxCells);
@@ -924,7 +1127,7 @@ export class MapPickModule extends Module {
     ];
     const [sx, sz] = toCell(A), [gx, gz] = toCell(B);
     const si = sz * W + sx, gi = gz * W + gx;
-    if (isNaN(hgt[si]) || isNaN(hgt[gi])) return console.warn('[mappick] pin outside terrain data');
+    if (isNaN(hgt[si]) || isNaN(hgt[gi])) return null;
 
     // local ground slope of every cell (steepest direction), so a path that runs ALONG a steep
     // hillside is judged by the hillside, not only by its own tiny up/down step
@@ -972,23 +1175,46 @@ export class MapPickModule extends Module {
         tpi[j * W + i] = C > 0 && v === v ? v - S / C : 0;
       }
     const hCap = Math.max(hgt[si], hgt[gi]);   // going higher than both pins = going over a mountain
+    return { x0, z0, cs, W, H, hgt, sl, GX, GZ, tpi, si, gi, hCap, toCell, mn: null, dom: null };
+  }
 
-    // A*: try the gentle limit first; only if no route exists, relax it step by step
-    let g, parent, closed, usedLimit = null;
+  // Mineral score (and strongest layer) of every grid cell, from the CRISM field. Sampled by lon/lat.
+  mineralGrid(G) {
+    const f = this.mineral;
+    if (!f?.ready) return false;
+    const { W, H, cs, x0, z0 } = G, t = this.terrain;
+    const mn = new Float32Array(W * H), dom = new Int16Array(W * H);
+    for (let j = 0; j < H; j++)
+      for (let i = 0; i < W; i++) {
+        const { lon, lat } = t.worldToLonLat(x0 + i * cs, z0 + j * cs);
+        mn[j * W + i] = f.sample(lon, lat);
+        dom[j * W + i] = f.layerAt(lon, lat);
+      }
+    G.mn = mn; G.dom = dom;
+    return true;
+  }
+
+  // A* between two grid cells. Slope limits are HARD (gentle limit first, relaxed only if nothing exists);
+  // the mineral score only DISCOUNTS the cost: cost = d * terrainFactor * (1 - pull * score).
+  // The heuristic is scaled by (1 - pull) so it can never overestimate (still optimal).
+  astar(G, start, goal, pull) {
+    const { W, H, cs, hgt, sl, GX, GZ, tpi, hCap, mn } = G;
+    const gx = goal % W, gz = (goal / W) | 0;
+    const minF = mn && pull > 0 ? 1 - pull : 1;
     const limits = [PLAN.maxSlopeDeg, ...PLAN.relaxLimits.filter((l) => l > PLAN.maxSlopeDeg)];
     for (const limit of limits) {
-      g = new Float64Array(W * H).fill(Infinity);
-      parent = new Int32Array(W * H).fill(-1);
-      closed = new Uint8Array(W * H);
-      const h = (i, j) => Math.hypot(i - gx, j - gz) * cs;
+      const g = new Float64Array(W * H).fill(Infinity);
+      const parent = new Int32Array(W * H).fill(-1);
+      const closed = new Uint8Array(W * H);
+      const h = (i, j) => Math.hypot(i - gx, j - gz) * cs * minF;
       const open = new MinHeap();
-      g[si] = 0; open.push(h(sx, sz), si);
+      g[start] = 0; open.push(h(start % W, (start / W) | 0), start);
 
       while (open.size) {
         const cur = open.pop();
         if (closed[cur]) continue;
         closed[cur] = 1;
-        if (cur === gi) break;
+        if (cur === goal) break;
         const ci = cur % W, cj = (cur / W) | 0;
         for (const [dx, dz] of NB) {
           const ni = ci + dx, nj = cj + dz;
@@ -1006,57 +1232,140 @@ export class MapPickModule extends Module {
           if (crossTheta > limit * PLAN.crossMaxFactor) continue;
           const ridge = Math.max(0, tpi[n]) / PLAN.ridgeRef;
           const high = Math.max(0, hgt[n] - hCap) / PLAN.elevRef;
-          const t = g[cur] + d * (1
+          const terr = 1
             + PLAN.slopeWeight * (theta / PLAN.slopeRefDeg) ** 2
             + PLAN.crossWeight * (crossTheta / PLAN.crossRefDeg) ** 2
             + PLAN.ridgeWeight * ridge * ridge
-            + PLAN.elevWeight * high);
+            + PLAN.elevWeight * high;
+          const mf = mn && pull > 0 ? 1 - pull * mn[n] : 1;          // mineral discount: 1 = none, 1 - pull = best
+          const t = g[cur] + d * terr * mf;
           if (t < g[n]) { g[n] = t; parent[n] = cur; open.push(t + h(ni, nj), n); }
         }
       }
-      if (closed[gi]) { usedLimit = limit; break; }
+      if (closed[goal]) {
+        const idxs = [];
+        for (let i = goal; i !== -1; i = parent[i]) idxs.push(i);
+        idxs.reverse();
+        return { idxs, limit, cost: g[goal] };
+      }
     }
+    return null;
+  }
 
-    if (usedLimit == null) return console.warn('[mappick] no route under any slope limit');
-    if (usedLimit > PLAN.maxSlopeDeg) console.warn(`[mappick] no route at ${PLAN.maxSlopeDeg} deg, used ${usedLimit} deg`);
-
-    // raw grid path (and its max slope)
-    const idxs = [];
-    for (let i = gi; i !== -1; i = parent[i]) idxs.push(i);
-    idxs.reverse();
-    let maxSlope = 0;
+  rawMaxSlope(G, idxs) {
+    const { W, cs, hgt } = G;
+    let m = 0;
     for (let k = 1; k < idxs.length; k++) {
       const a = idxs[k - 1], b = idxs[k];
       const d = Math.hypot((b % W) - (a % W), ((b / W) | 0) - ((a / W) | 0)) * cs;
-      maxSlope = Math.max(maxSlope, Math.atan(Math.abs(hgt[b] - hgt[a]) / d) * 180 / Math.PI);
+      m = Math.max(m, Math.atan(Math.abs(hgt[b] - hgt[a]) / d) * 180 / Math.PI);
     }
+    return m;
+  }
 
-    // smooth in x/z, pin the ends exactly on the pins, then resample densely
+  // grid cells -> smoothed x/z points; `from` / `to` (optional) pin the first / last point exactly
+  legPoints(G, idxs, from, to) {
+    const { W, cs, x0, z0 } = G;
     let pts = idxs.map((i) => ({ x: x0 + (i % W) * cs, z: z0 + ((i / W) | 0) * cs }));
-    pts[0] = { x: A.x, z: A.z };
-    pts[pts.length - 1] = { x: B.x, z: B.z };
-    pts = chaikin(pts, PLAN.smoothIters);
-    const step = Math.max(cs / 5, 2, polyLength(pts) / PLAN.maxRoutePoints);
-    pts = resample(pts, step);
+    if (from) pts[0] = { x: from.x, z: from.z };
+    if (to) pts[pts.length - 1] = { x: to.x, z: to.z };
+    return chaikin(pts, PLAN.smoothIters);
+  }
 
-    // drape on the real surface
-    // (the old code averaged the heights and kept the maximum, which made the line bridge over every
-    // valley and sit tens of metres above ridges. Now it uses the real ground height; drawRoute()
-    // then keeps re-laying it on the drawn surface while the camera moves.)
+  // resample densely, drape on the real surface, measure the true 3D length
+  finishPath(G, pts) {
+    const step = Math.max(G.cs / 5, 2, polyLength(pts) / PLAN.maxRoutePoints);
+    pts = resample(pts, step);
+    // (heights are the REAL ground, low-pass filtered; drawRoute() paints the route into the terrain)
     const ground = this.pathHeights(pts);
     const lifted = pts.map((p, i) => new THREE.Vector3(p.x, ground[i] + PLAN.groundLift, p.z));
-
-    // true surface length (3D)
     let routeLen = 0;
     for (let i = 1; i < pts.length; i++) {
       routeLen += Math.hypot(pts[i].x - pts[i - 1].x, (ground[i] - ground[i - 1]) * PLAN.verticalScale, pts[i].z - pts[i - 1].z);
     }
+    return { pts, lifted, routeLen };
+  }
 
-    this.drawRoute(lifted);
-    this.showPanel({ a: area.a, b: area.b, straight, routeLen, maxSlope, limit: usedLimit });
-    this.ctx.state.set('route', lifted);
-    this.ctx.bus.emit('route:planned', { points: lifted, length: routeLen, cost: g[gi] });
-    console.log(`[mappick] route: ${lifted.length} points, ${routeLen.toFixed(0)} m, cell ${cs.toFixed(0)}`);
+  // average mineral score (0..1) along a list of {x, z}
+  meanMineral(pts) {
+    const f = this.mineral;
+    if (!f?.ready || !pts.length) return null;
+    const n = Math.min(pts.length, 400), stride = pts.length / n;
+    let s = 0;
+    for (let k = 0; k < n; k++) {
+      const p = pts[Math.min(pts.length - 1, Math.floor(k * stride))];
+      const { lon, lat } = this.terrain.worldToLonLat(p.x, p.z);
+      s += f.sample(lon, lat);
+    }
+    return s / n;
+  }
+
+  // Hotspots = clusters of strong mineral signal on ground the rover can stand on. The score is smoothed over
+  // hotspotRadiusM, cells above hotspotMin are ranked, and weaker ones within hotspotSepM of a stronger one are dropped.
+  findHotspots(G) {
+    const { W, H, cs, x0, z0, hgt, sl, mn, dom } = G;
+    const R = Math.max(1, Math.round(PLAN.hotspotRadiusM / cs));
+    const sm = boxMean(mn, W, H, R);
+    const cand = [];
+    for (let k = 0; k < W * H; k++) {
+      if (sm[k] < PLAN.hotspotMin || isNaN(hgt[k]) || sl[k] > PLAN.maxSlopeDeg) continue;
+      cand.push(k);
+    }
+    cand.sort((p, q) => sm[q] - sm[p]);
+    const out = [];
+    for (const k of cand) {
+      const x = x0 + (k % W) * cs, z = z0 + ((k / W) | 0) * cs;
+      if (out.some((o) => Math.hypot(o.x - x, o.z - z) < PLAN.hotspotSepM)) continue;
+      out.push({ idx: k, x, z, v: sm[k], k: dom[k] });
+      if (out.length >= 24) break;
+    }
+    return out;
+  }
+
+  // Separate route A -> hotspots -> B for mineral optimisation. Hotspots are added best-first while the straight-line
+  // length of the visiting order stays inside tourBudget x |AB| (a small orienteering heuristic), ordered with
+  // nearest-neighbour + 2-opt, and every leg is a real A* path (same slope rules, same mineral discount).
+  planTour(area, straight) {
+    const A = area.a, B = area.b;
+    const G = this.buildGrid(A, B, PLAN.tourPad);
+    if (!G || !this.mineralGrid(G)) return null;
+    const spots = this.findHotspots(G);
+    if (!spots.length) { console.warn('[mappick] tour: no hotspot above the threshold in the search window'); return null; }
+
+    const budget = straight * PLAN.tourBudget;
+    let chosen = [], order = { seq: [], length: straight };
+    for (const s of spots) {
+      if (chosen.length >= PLAN.tourMaxStops) break;
+      const trial = orderStops(A, B, [...chosen, s]);
+      if (trial.length <= budget) { chosen = [...chosen, s]; order = trial; }
+    }
+    if (!chosen.length) { console.warn('[mappick] tour: no hotspot fits the distance budget'); return null; }
+
+    // A* leg by leg; a hotspot that cannot be reached is skipped
+    const [sx, sz] = G.toCell(A), [gx, gz] = G.toCell(B);
+    let from = sz * G.W + sx;
+    const goal = gz * G.W + gx;
+    const targets = [...order.seq, { end: true, idx: goal }];
+    const legs = [], used = [];
+    let pts = [], cost = 0, prev = A;
+    for (const t of targets) {
+      const r = this.astar(G, from, t.idx, PLAN.tourPull);
+      if (!r) { if (t.end) return null; continue; }
+      const leg = this.legPoints(G, r.idxs, prev, t.end ? B : t);
+      pts = pts.length ? pts.concat(leg.slice(1)) : leg;
+      cost += r.cost; legs.push(r);
+      if (!t.end) { used.push(t); prev = t; }
+      from = t.idx;
+    }
+    if (!used.length) return null;
+
+    const path = this.finishPath(G, pts);
+    const stops = used.map((s, n) => {
+      const { lon, lat } = this.terrain.worldToLonLat(s.x, s.z);
+      const li = s.k;
+      return { n: n + 1, x: s.x, z: s.z, lon, lat, score: s.v, layer: li >= 0 ? this.mineral.names[li] : '' };
+    });
+    return { lifted: path.lifted, routeLen: path.routeLen, stops, meanMineral: this.meanMineral(path.pts), cost };
   }
 
   // Ground height at world x/z. ONE source only (the drawn-surface sampler). The old version took the max
@@ -1105,10 +1414,10 @@ export class MapPickModule extends Module {
   // The path is painted INTO the terrain: the route is rasterised into a small mask texture and the
   // terrain material's fragment shader tints every pixel that falls on it. No 3D object floats on top,
   // so the path follows the ground exactly and keeps the terrain's lighting/relief.
-  drawRoute(points) {
+  drawRoute(points, tourPoints = null) {
     this.clearRoute();
     let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
-    for (const p of points) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }
+    for (const p of [...points, ...(tourPoints || [])]) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }
     const pad = PLAN.pathWidthM * 2;
     x0 -= pad; z0 -= pad; x1 += pad; z1 += pad;
     const w = x1 - x0, h = z1 - z0;
@@ -1119,14 +1428,20 @@ export class MapPickModule extends Module {
     cv.width = cw; cv.height = ch;
     const g = cv.getContext('2d');
     g.fillStyle = '#000'; g.fillRect(0, 0, cw, ch);
-    g.strokeStyle = '#fff'; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.globalCompositeOperation = 'lighter';                     // the two routes live in different colour channels
+    g.lineCap = 'round'; g.lineJoin = 'round';
     g.lineWidth = Math.max(PLAN.pathWidthM / mpp, 2);
-    g.beginPath();
-    points.forEach((p, i) => {
-      const px = (p.x - x0) / mpp, py = (p.z - z0) / mpp;
-      if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
-    });
-    g.stroke();
+    const stroke = (pts, color) => {
+      g.strokeStyle = color;
+      g.beginPath();
+      pts.forEach((p, i) => {
+        const px = (p.x - x0) / mpp, py = (p.z - z0) / mpp;
+        if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+      });
+      g.stroke();
+    };
+    if (tourPoints?.length) stroke(tourPoints, '#00ff00');      // mask.g = mineral tour
+    stroke(points, '#ff0000');                                  // mask.r = main route
 
     const tex = new THREE.CanvasTexture(cv);
     tex.flipY = false;                                          // canvas row 0 = z0
@@ -1139,6 +1454,7 @@ export class MapPickModule extends Module {
     ROUTE_U.uRouteMask.value = tex;
     ROUTE_U.uRouteBox.value.set(x0, z0, w, h);
     ROUTE_U.uRouteColor.value.set(PLAN.color);
+    ROUTE_U.uRouteColor2.value.set(PLAN.tourColor);
     ROUTE_U.uRouteOn.value = 1;
     this.routeU = ROUTE_U;
 
@@ -1184,12 +1500,16 @@ export class MapPickModule extends Module {
           uniform sampler2D uRouteMask;
           uniform vec4 uRouteBox;
           uniform vec3 uRouteColor;
+          uniform vec3 uRouteColor2;
           uniform float uRouteOn;`)
         .replace('#include <dithering_fragment>', `
           {
             vec2 ruv = (vRouteXZ - uRouteBox.xy) / uRouteBox.zw;
             if (uRouteOn > 0.5 && ruv.x >= 0.0 && ruv.x <= 1.0 && ruv.y >= 0.0 && ruv.y <= 1.0) {
-              float rm = smoothstep(0.2, 0.7, texture2D(uRouteMask, ruv).r);
+              vec4 rt = texture2D(uRouteMask, ruv);
+              float rm = smoothstep(0.2, 0.7, rt.r);
+              float rm2 = smoothstep(0.2, 0.7, rt.g);
+              gl_FragColor.rgb = mix(gl_FragColor.rgb, uRouteColor2, rm2 * 0.95);
               gl_FragColor.rgb = mix(gl_FragColor.rgb, uRouteColor, rm * 0.95);
             }
           }
@@ -1210,7 +1530,8 @@ export class MapPickModule extends Module {
     this.routeTex = null;
     this.routeU = null;
     for (const c of [...this.routeGroup.children]) {
-      this.routeGroup.remove(c); c.material?.dispose?.(); c.geometry?.dispose?.();
+      this.routeGroup.remove(c);
+      c.traverse?.((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); });
     }
   }
 
@@ -1483,22 +1804,34 @@ export class MapPickModule extends Module {
   }
 
   // UI WIRING (see makeFeatureUI): route info panel; the route logic only calls this with its numbers.
-  showPanel({ a, b, straight, routeLen, maxSlope, limit }) {
+  showPanel({ a, b, straight, routeLen, maxSlope, limit, minStats = null, tour = null }) {
     this.removePanel();
     const dot = (c) => `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c};margin-right:8px"></span>`;
     const bar = (c, extra = '') => `<span style="display:inline-block;width:22px;height:4px;background:${c};margin-right:8px;vertical-align:middle;${extra}"></span>`;
+    const pct = (v) => `${Math.round(v * 100)}%`;
+    const tc = '#' + PLAN.tourColor.toString(16).padStart(6, '0');
     this.routePanel = this.ctx.ui.addPanel({
       id: 'routeInfo', title: 'Route info', dock: 'left', collapsed: true,
       build: (body) => {
+        const mineral = minStats
+          ? `<div>Mineral score along route: <b>${pct(minStats.route)}</b> <span style="opacity:.7">(straight line ${pct(minStats.straight)}${minStats.used ? `, pull ${pct(minStats.pull)}` : ', factor off'})</span></div>`
+          : '';
+        const tourHtml = tour ? `
+      <div style="font-weight:600;margin:8px 0 2px;color:${tc}">Mineral tour</div>
+      <div>Tour length: <b>${fmtDist(tour.routeLen)}</b> <span style="opacity:.7">(${(tour.routeLen / routeLen).toFixed(1)}x the direct route)</span></div>
+      <div>Mineral score along tour: <b>${pct(tour.meanMineral ?? 0)}</b></div>
+      ${tour.stops.map((s) => `<div style="font-size:12px">${dot(tc)}<b>${s.n}</b> ${fmtLat(s.lat)}, ${fmtLon(s.lon)} <span style="opacity:.7">· ${s.layer || 'n/a'} · ${pct(s.score)}</span></div>`).join('')}` : '';
         body.innerHTML = `
       <div>${dot('#ff3030')}<b>A</b> ${fmtLat(a.lat)}, ${fmtLon(a.lon)}</div>
       <div>${dot('#ff3030')}<b>B</b> ${fmtLat(b.lat)}, ${fmtLon(b.lon)}</div>
       <div style="margin-top:6px">Straight distance: <b>${fmtDist(straight)}</b></div>
       <div>Route length: <b>${fmtDist(routeLen)}</b></div>
       <div>Max slope on route: <b>${maxSlope.toFixed(1)}°</b> <span style="opacity:.7">(limit ${limit}°${limit > PLAN.maxSlopeDeg ? ', relaxed: no gentler way exists' : ''})</span></div>
+      ${mineral}${tourHtml}
       <div style="font-weight:600;margin:8px 0 2px">Legend</div>
       <div>${dot('#ff3030')}Selected points</div>
       <div>${bar('#39ff88')}Planned route (painted into the terrain)</div>
+      ${tour ? `<div>${bar(tc)}Mineral tour</div><div>${dot(tc)}Mineral hotspot</div>` : ''}
       <div>${bar('#ffd23f')}Straight line (reference)</div>`;
         const wb = document.createElement('button');
         wb.textContent = 'Weather along this route';
